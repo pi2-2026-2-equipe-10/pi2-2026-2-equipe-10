@@ -4,6 +4,10 @@ import { Register } from './pages/Register';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { SendCode } from './pages/SendCode';
 import { ResetPassword } from './pages/ResetPassword';
+import { MaterialsRegistration } from './pages/MaterialsRegistration';
+import { MaterialsList } from './pages/MaterialsList';
+
+import './styles/dashboard.css';
 
 function App() {
   return (
@@ -14,6 +18,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/send-code" element={<SendCode />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/materials" element={<MaterialsList />} />
+        <Route path="/materials/new" element={<MaterialsRegistration />} />
       </Routes>
     </BrowserRouter>
   );
