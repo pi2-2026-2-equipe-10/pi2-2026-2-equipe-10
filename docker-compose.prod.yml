@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: ./dsilk-frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: dsilk-frontend-prod
+    ports:
+      - "80:80"
+    networks:
+      - dsilk-network
+    restart: unless-stopped
+
+networks:
+  dsilk-network:
+    driver: bridge

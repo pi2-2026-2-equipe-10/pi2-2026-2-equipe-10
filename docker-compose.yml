@@ -1,0 +1,33 @@
+services:
+  frontend:
+    build:
+      context: ./dsilk-frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: dsilk-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./dsilk-frontend:/app
+      - /app/node_modules
+    networks:
+      - dsilk-network
+    restart: unless-stopped
+
+  # Placeholder para o Backend quando implementado:
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: dsilk-backend
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - dsilk-network
+  #   restart: unless-stopped
+
+networks:
+  dsilk-network:
+    driver: bridge
