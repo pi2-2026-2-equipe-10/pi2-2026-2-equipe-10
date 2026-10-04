@@ -1,13 +1,16 @@
 package com.grafica.api.controller;
 
-import com.grafica.api.data.Dados;
 import com.grafica.api.exception.ApiException;
 import com.grafica.api.model.Material;
 import com.grafica.api.util.Validacao;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Comparator;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -15,25 +18,42 @@ import java.util.Map;
 @RequestMapping("/materiais")
 public class MaterialController {
 
+    private static final BigDecimal CUSTO_MAXIMO = new BigDecimal("9999999999.99");
+
+    private final JdbcClient jdbc;
+
+    public MaterialController(JdbcClient jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    private static Material mapear(ResultSet rs, int i) throws SQLException {
+        return new Material(
+                rs.getInt("id"),
+                rs.getString("nome"),
+                rs.getString("unidade_medida"),
+                rs.getBigDecimal("custo").doubleValue());
+    }
+
     // GET /materiais
     @GetMapping
     public List<Material> listar() {
-        return Dados.MATERIAIS.stream()
-                .sorted(Comparator.comparing(Material::nome, String.CASE_INSENSITIVE_ORDER))
-                .toList();
+        return jdbc.sql("SELECT id, nome, unidade_medida, custo FROM material ORDER BY nome")
+                .query(MaterialController::mapear)
+                .list();
     }
 
     // GET /materiais/{id}
     @GetMapping("/{id}")
     public Material buscar(@PathVariable String id) {
         Double idNumerico = Validacao.numeroPositivo(id);
-        if (idNumerico == null) {
+        if (idNumerico == null || idNumerico != Math.floor(idNumerico)) {
             throw new ApiException(400, "O id informado na URL é inválido.");
         }
 
-        return Dados.MATERIAIS.stream()
-                .filter(m -> m.id() == idNumerico)
-                .findFirst()
+        return jdbc.sql("SELECT id, nome, unidade_medida, custo FROM material WHERE id = :id")
+                .param("id", idNumerico.intValue())
+                .query(MaterialController::mapear)
+                .optional()
                 .orElseThrow(() -> new ApiException(404, "Material não encontrado."));
     }
 
@@ -56,10 +76,24 @@ public class MaterialController {
             throw new ApiException(400, "O campo 'custo' é obrigatório e deve ser maior que zero.");
         }
 
-        int novoId = Dados.MATERIAIS.stream().mapToInt(Material::id).max().orElse(0) + 1;
-        Material novo = new Material(novoId, ((String) nome).trim(), ((String) unidade).trim(), custoNumerico);
-        Dados.MATERIAIS.add(novo);
+        BigDecimal custoDb = BigDecimal.valueOf(custoNumerico).setScale(2, RoundingMode.HALF_UP);
+        if (custoDb.compareTo(CUSTO_MAXIMO) > 0) {
+            throw new ApiException(400, "O campo 'custo' excede o valor máximo permitido.");
+        }
 
-        return novo;
+        String nomeLimpo = ((String) nome).trim();
+        String unidadeLimpa = ((String) unidade).trim();
+
+        int novoId = jdbc.sql("""
+                INSERT INTO material (nome, unidade_medida, custo)
+                VALUES (:nome, :unidade, :custo) RETURNING id
+                """)
+                .param("nome", nomeLimpo)
+                .param("unidade", unidadeLimpa)
+                .param("custo", custoDb)
+                .query(Integer.class)
+                .single();
+
+        return new Material(novoId, nomeLimpo, unidadeLimpa, custoDb.doubleValue());
     }
 }
