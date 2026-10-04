@@ -1,0 +1,53 @@
+@url = http://localhost:3000
+@token = {{login.response.body.token}}
+
+### 1. Lista de funcionários ativos (200)
+GET {{url}}/funcionarios
+
+### 2. Login (200) - RODE ESTE ANTES DOS MATERIAIS
+# @name login
+POST {{url}}/login
+Content-Type: application/json
+
+{ "funcionarioId": 1, "senha": "123456" }
+
+### 3. Erro 401: senha incorreta
+POST {{url}}/login
+Content-Type: application/json
+
+{ "funcionarioId": 1, "senha": "errada" }
+
+### 4. Erro 400: campos ausentes
+POST {{url}}/login
+Content-Type: application/json
+
+{ "funcionarioId": 1 }
+
+### 5. Lista de materiais (200)
+GET {{url}}/materiais
+Authorization: Bearer {{token}}
+
+### 6. Material por id (200)
+GET {{url}}/materiais/1
+Authorization: Bearer {{token}}
+
+### 7. Erro 404: material não existe
+GET {{url}}/materiais/999
+Authorization: Bearer {{token}}
+
+### 8. Cadastrar material (201)
+POST {{url}}/materiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Banner PVC", "unidadeMedida": "m²", "custo": "12.5" }
+
+### 9. Erro 400: custo inválido
+POST {{url}}/materiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Banner PVC", "unidadeMedida": "m²", "custo": 0 }
+
+### 10. Erro 401: sem token
+GET {{url}}/materiais
