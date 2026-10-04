@@ -582,8 +582,17 @@ O sistema deve permitir ao funcionário visualizar os serviços e atividades pla
 
 **Critérios de Aceitação:**
 
-- O funcionário deve conseguir acessar o planejamento semanal.
-- Os serviços e atividades registrados devem ser apresentados de forma organizada por dia.
+*Cenário: Visualizar planejamento semanal*
+- Dado que o funcionário está autenticado no sistema
+- Quando acessar o planejamento semanal
+- Então o sistema deve apresentar os serviços e atividades planejados
+- E organizá-los por dia.
+
+*Cenário: Planejamento sem atividades*
+- Dado que o funcionário está autenticado no sistema
+- E não existem atividades planejadas
+- Quando acessar o planejamento semanal
+- Então o sistema deve apresentar o planejamento sem atividades registradas.
 
 ---
 
@@ -612,9 +621,22 @@ O sistema deve permitir ao funcionário registrar serviços ou atividades em dia
 
 **Critérios de Aceitação:**
 
-- O funcionário deve conseguir registrar uma atividade em um dia específico.
-- O funcionário deve conseguir alterar uma atividade já registrada.
-- As alterações realizadas devem ser atualizadas no planejamento.
+*Cenário: Registrar atividade no planejamento*
+- Dado que o funcionário está autenticado no sistema
+- Quando acessar o planejamento semanal
+- E registrar um serviço ou atividade em um dia específico
+- Então o sistema deve registrar a atividade no planejamento.
+
+*Cenário: Editar atividade no planejamento*
+- Dado que existe uma atividade registrada no planejamento
+- Quando o funcionário alterar suas informações
+- Então o sistema deve atualizar a atividade no planejamento.
+
+*Cenário: Informações necessárias não informadas*
+- Dado que o funcionário está registrando uma atividade no planejamento
+- Quando não informar uma ou mais informações necessárias
+- Então o sistema deve solicitar o preenchimento das informações
+- E não deve concluir o registro enquanto os dados necessários não forem informados.
 
 ---
 
@@ -644,9 +666,23 @@ O sistema deve permitir o cadastro de funcionários a partir da opção “Adici
 - Caso informações necessárias não sejam preenchidas, o sistema solicita seu preenchimento antes de concluir o cadastro.
 
 **Critérios de Aceitação:**
-- A opção “Adicionar funcionário” deve estar disponível na tela inicial.
-- O sistema deve permitir informar os dados necessários para o cadastro do funcionário.
-- Após a confirmação, o funcionário deve ser registrado no sistema.
+
+*Cenário: Acessar cadastro de funcionário*
+- Dado que o sistema está disponível para acesso
+- Quando o funcionário acessar a tela inicial do sistema
+- Então o sistema deve apresentar a opção “Adicionar funcionário”.
+
+*Cenário: Cadastrar funcionário*
+- Dado que o funcionário está no formulário de cadastro
+- Quando informar os dados necessários
+- E confirmar o cadastro
+- Então o sistema deve registrar o funcionário.
+
+*Cenário: Dados necessários não informados*
+- Dado que o funcionário está no formulário de cadastro
+- Quando tentar confirmar o cadastro sem informar uma ou mais informações necessárias
+- Então o sistema deve solicitar o preenchimento das informações
+- E não deve concluir o cadastro enquanto os dados necessários não forem informados.
 
 ---
 
@@ -677,7 +713,24 @@ O sistema deve permitir que o funcionário selecione seu nome entre os funcioná
 - Caso a senha informada não corresponda às credenciais do funcionário, o sistema não realiza a autenticação.
 
 **Critérios de Aceitação:**
-- O sistema deve apresentar os funcionários cadastrados na tela inicial.
-- Ao selecionar um funcionário, o sistema deve solicitar sua senha.
-- O acesso deve ser permitido somente após a autenticação das credenciais.
-- Funcionários inativos não devem realizar a autenticação no sistema.
+
+*Cenário: Selecionar funcionário para autenticação*
+- Dado que existem funcionários cadastrados no sistema
+- Quando o funcionário acessar a tela inicial
+- Então o sistema deve apresentar os funcionários cadastrados
+- E permitir a seleção de um funcionário.
+
+*Cenário: Autenticar funcionário com credenciais válidas*
+- Dado que o funcionário está cadastrado e ativo no sistema
+- Quando selecionar seu nome
+- E informar a senha correta
+- E selecionar a opção “Entrar”
+- Então o sistema deve realizar a autenticação
+- E permitir o acesso ao sistema.
+
+*Cenário: Senha incorreta*
+- Dado que o funcionário está cadastrado e ativo no sistema
+- Quando selecionar seu nome
+- E informar uma senha incorreta
+- Então o sistema não deve realizar a autenticação
+- E não deve permitir o acesso ao sistema.
