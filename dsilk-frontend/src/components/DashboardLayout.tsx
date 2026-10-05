@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
-import { User, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Search, LogOut } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface DashboardLayoutProps {
@@ -8,14 +9,36 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeMenu = 'Materiais' }) => {
-  const menuItems = ['Materiais', 'Clientes', 'Serviços', 'Orçamentos', 'Planejamento'];
+  const navigate = useNavigate();
+
+  const menuItems = [
+    { name: 'Materiais', path: '/materials' },
+    { name: 'Clientes', path: '/clients' },
+    { name: 'Serviços', path: '/services' },
+    { name: 'Orçamentos', path: '/budgets' },
+    { name: 'Planejamento', path: '/planning' },
+  ];
+
+  const handleLogout = () => {
+    navigate('/');
+  };
 
   return (
     <div className="dashboard-layout">
       {/* Header */}
       <header className="dashboard-header">
         <div className="dashboard-header-left">
-          <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center', marginBottom: '-2rem', paddingTop: '10px' }}>
+          <div 
+            onClick={() => navigate('/materials')}
+            style={{ 
+              transform: 'scale(0.85)', 
+              transformOrigin: 'left center', 
+              marginBottom: '-2rem', 
+              paddingTop: '10px',
+              cursor: 'pointer' 
+            }}
+            title="Ir para tela inicial"
+          >
              <Logo />
           </div>
         </div>
@@ -29,9 +52,22 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
               className="header-search"
             />
           </div>
-          <div className="header-profile-icon">
+          <div 
+            className="header-profile-icon" 
+            title="Sair / Logout"
+            onClick={handleLogout}
+          >
             <User size={20} />
           </div>
+          <button 
+            type="button"
+            onClick={handleLogout}
+            className="header-logout-btn"
+            title="Encerrar sessão"
+          >
+            <LogOut size={18} />
+            <span>Sair</span>
+          </button>
         </div>
       </header>
 
@@ -40,10 +76,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
         <aside className="dashboard-sidebar">
           {menuItems.map(item => (
             <div 
-              key={item} 
-              className={`sidebar-nav-item ${activeMenu === item ? 'active' : ''}`}
+              key={item.name} 
+              className={`sidebar-nav-item ${activeMenu === item.name ? 'active' : ''}`}
+              onClick={() => navigate(item.path)}
             >
-              {item}
+              {item.name}
             </div>
           ))}
         </aside>
