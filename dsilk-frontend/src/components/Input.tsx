@@ -2,18 +2,20 @@ import React, { InputHTMLAttributes } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
   icon?: LucideIcon;
 }
 
 export const Input: React.FC<InputProps> = ({ label, icon: Icon, id, ...props }) => {
-  const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
+  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
   
   return (
     <div className="input-group">
-      <label htmlFor={inputId} className="input-label">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={inputId} className="input-label">
+          {label}
+        </label>
+      )}
       <div className="input-wrapper">
         {Icon && <Icon className="input-icon" />}
         <input
