@@ -6,6 +6,11 @@ import { SendCode } from './pages/SendCode';
 import { ResetPassword } from './pages/ResetPassword';
 import { MaterialsRegistration } from './pages/MaterialsRegistration';
 import { MaterialsList } from './pages/MaterialsList';
+import { ServicesList } from './pages/ServicesList';
+import { ServicesRegistration } from './pages/ServicesRegistration';
+import { BudgetsList } from './pages/BudgetsList';
+import { BudgetCalculator } from './pages/BudgetCalculator';
+import { PlanningWeekly } from './pages/PlanningWeekly';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 
 import './styles/dashboard.css';
@@ -27,11 +32,19 @@ function App() {
         <Route path="/materials/new" element={<MaterialsRegistration />} />
         <Route path="/materials/edit/:id" element={<MaterialsRegistration />} />
 
-        {/* Dashboard Modules Routes (Sprints / Issues seguintes) */}
+        {/* Services & Composition Routes (Issue #56) */}
+        <Route path="/services" element={<ServicesList />} />
+        <Route path="/services/new" element={<ServicesRegistration />} />
+
+        {/* Budgets Routes (Issue #56) */}
+        <Route path="/budgets" element={<BudgetsList />} />
+        <Route path="/budgets/new" element={<BudgetCalculator />} />
+
+        {/* Planning Routes (Issue #56) */}
+        <Route path="/planning" element={<PlanningWeekly />} />
+
+        {/* Clients Module */}
         <Route path="/clients" element={<PlaceholderPage title="Clientes" activeMenu="Clientes" />} />
-        <Route path="/services" element={<PlaceholderPage title="Serviços" activeMenu="Serviços" />} />
-        <Route path="/budgets" element={<PlaceholderPage title="Orçamentos" activeMenu="Orçamentos" />} />
-        <Route path="/planning" element={<PlaceholderPage title="Planejamento" activeMenu="Planejamento" />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
