@@ -17,6 +17,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - dsilk-network
 
   backend:
     build: ./backend
@@ -31,15 +33,31 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - dsilk-network
 
   frontend:
-    build: ./dsilk-frontend
+    build:
+      context: ./dsilk-frontend
+      dockerfile: Dockerfile
+      target: development
     container_name: grafica_frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./dsilk-frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
+    networks:
+      - dsilk-network
 
 volumes:
   grafica_db_data:
+
+networks:
+  dsilk-network:
+    driver: bridge

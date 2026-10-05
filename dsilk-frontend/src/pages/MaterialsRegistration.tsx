@@ -1,23 +1,29 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 
 export const MaterialsRegistration: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isEditing = Boolean(id);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Material salvo com sucesso!');
+    alert(isEditing ? 'Material atualizado com sucesso!' : 'Material salvo com sucesso!');
     navigate('/materials');
   };
 
   return (
     <DashboardLayout activeMenu="Materiais">
       <div style={{ marginBottom: '2.5rem' }}>
-        <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Novo/editar material</h2>
-        <p className="auth-description" style={{ textAlign: 'left' }}>cadastrar dados e custo do material</p>
+        <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>
+          {isEditing ? 'Editar Material' : 'Novo Material'}
+        </h2>
+        <p className="auth-description" style={{ textAlign: 'left' }}>
+          {isEditing ? 'Editar dados e custo do material cadastrado' : 'Cadastrar dados e custo do material'}
+        </p>
       </div>
 
       <div className="dashboard-card">
@@ -27,12 +33,14 @@ export const MaterialsRegistration: React.FC = () => {
             <Input 
               label="Nome do material" 
               placeholder="Ex: Tinta Cyan 1L" 
+              defaultValue={isEditing ? 'Lona Banner' : ''}
               required 
             />
             
             <Input 
               label="Unidade de Medida" 
               placeholder="Ex: Litro, kg, Metro, Unidade" 
+              defaultValue={isEditing ? 'm' : ''}
               required 
             />
             
@@ -41,6 +49,7 @@ export const MaterialsRegistration: React.FC = () => {
               placeholder="R$ 0,00" 
               type="number"
               step="0.01"
+              defaultValue={isEditing ? '18.00' : ''}
               required 
             />
           </div>
@@ -50,7 +59,7 @@ export const MaterialsRegistration: React.FC = () => {
               cancelar
             </Button>
             <Button type="submit" variant="primary" style={{ width: 'auto' }}>
-              salvar material
+              {isEditing ? 'atualizar material' : 'salvar material'}
             </Button>
           </div>
           

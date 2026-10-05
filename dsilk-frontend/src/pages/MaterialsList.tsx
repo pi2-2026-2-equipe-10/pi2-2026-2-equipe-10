@@ -43,7 +43,13 @@ export const MaterialsList: React.FC = () => {
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mat.cost)}
                 </td>
                 <td style={{ textAlign: 'right' }}>
-                  <a href="#" style={{ textDecoration: 'underline', color: 'var(--text-light)', fontSize: '0.9rem' }}>editar</a>
+                  <button 
+                    type="button"
+                    onClick={() => navigate(`/materials/edit/${mat.id}`)} 
+                    style={{ background: 'none', border: 'none', textDecoration: 'underline', color: 'var(--text-light)', fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    editar
+                  </button>
                 </td>
               </tr>
             ))}

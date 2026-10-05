@@ -10,7 +10,7 @@ export const Login: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Login realizado com sucesso! (A tela principal ainda será implementada)');
+    navigate('/materials');
   };
 
   return (
