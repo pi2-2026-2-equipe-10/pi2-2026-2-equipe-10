@@ -96,4 +96,51 @@ public class MaterialController {
 
         return new Material(novoId, nomeLimpo, unidadeLimpa, custoDb.doubleValue());
     }
+
+    // PUT /materiais/{id}
+    @PutMapping("/{id}")
+    public Material atualizar(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
+        Double idNumerico = Validacao.numeroPositivo(id);
+        if (idNumerico == null || idNumerico != Math.floor(idNumerico)) {
+            throw new ApiException(400, "O id informado na URL é inválido.");
+        }
+
+        buscar(id);
+
+        Object nome = corpo == null ? null : corpo.get("nome");
+        Object unidade = corpo == null ? null : corpo.get("unidadeMedida");
+        Object custo = corpo == null ? null : corpo.get("custo");
+
+        if (!Validacao.textoObrigatorio(nome)) {
+            throw new ApiException(400, "O campo 'nome' é obrigatório.");
+        }
+        if (!Validacao.textoObrigatorio(unidade)) {
+            throw new ApiException(400, "O campo 'unidadeMedida' é obrigatório.");
+        }
+        Double custoNumerico = Validacao.numeroPositivo(custo);
+        if (custoNumerico == null) {
+            throw new ApiException(400, "O campo 'custo' é obrigatório e deve ser maior que zero.");
+        }
+
+        BigDecimal custoDb = BigDecimal.valueOf(custoNumerico).setScale(2, RoundingMode.HALF_UP);
+        if (custoDb.compareTo(CUSTO_MAXIMO) > 0) {
+            throw new ApiException(400, "O campo 'custo' excede o valor máximo permitido.");
+        }
+
+        String nomeLimpo = ((String) nome).trim();
+        String unidadeLimpa = ((String) unidade).trim();
+
+        jdbc.sql("""
+                UPDATE material
+                SET nome = :nome, unidade_medida = :unidade, custo = :custo
+                WHERE id = :id
+                """)
+                .param("nome", nomeLimpo)
+                .param("unidade", unidadeLimpa)
+                .param("custo", custoDb)
+                .param("id", idNumerico.intValue())
+                .update();
+
+        return new Material(idNumerico.intValue(), nomeLimpo, unidadeLimpa, custoDb.doubleValue());
+    }
 }
