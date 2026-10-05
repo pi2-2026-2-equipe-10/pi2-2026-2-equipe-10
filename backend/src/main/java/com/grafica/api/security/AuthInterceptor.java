@@ -11,6 +11,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
         String cabecalho = request.getHeader("Authorization");
 
         if (cabecalho == null || !cabecalho.startsWith("Bearer ")) {
