@@ -1,15 +1,57 @@
 services:
+  db:
+    image: postgres:16
+    container_name: grafica_db_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: grafica
+      POSTGRES_USER: grafica_user
+      POSTGRES_PASSWORD: grafica_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - grafica_db_prod_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grafica_user -d grafica"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dsilk-network
+
+  backend:
+    build: ./backend
+    container_name: grafica_backend_prod
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/grafica
+      DB_USER: grafica_user
+      DB_PASSWORD: grafica_pass
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - dsilk-network
+
   frontend:
     build:
       context: ./dsilk-frontend
       dockerfile: Dockerfile
       target: production
-    container_name: dsilk-frontend-prod
+    container_name: grafica_frontend_prod
+    restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"
+    depends_on:
+      - backend
     networks:
       - dsilk-network
-    restart: unless-stopped
+
+volumes:
+  grafica_db_prod_data:
 
 networks:
   dsilk-network:
