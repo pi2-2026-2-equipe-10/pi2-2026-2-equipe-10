@@ -20,6 +20,8 @@ CREATE TABLE funcionario (
     ativo       BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+CREATE INDEX idx_funcionario_ativo ON funcionario(ativo);
+
 -- ---------------------------------------------------------------------
 -- Cliente
 -- Quem solicita orçamentos.
@@ -28,7 +30,7 @@ CREATE TABLE cliente (
     id            SERIAL PRIMARY KEY,
     nome          VARCHAR(150) NOT NULL,
     telefone      VARCHAR(20),
-    email         VARCHAR(150),
+    email         VARCHAR(150) UNIQUE,
     observacoes   TEXT
 );
 
@@ -38,7 +40,7 @@ CREATE TABLE cliente (
 -- ---------------------------------------------------------------------
 CREATE TABLE material (
     id              SERIAL PRIMARY KEY,
-    nome            VARCHAR(150) NOT NULL,
+    nome            VARCHAR(150) NOT NULL UNIQUE,
     unidade_medida  VARCHAR(20) NOT NULL,
     custo           NUMERIC(12,2) NOT NULL CHECK (custo >= 0)
 );
