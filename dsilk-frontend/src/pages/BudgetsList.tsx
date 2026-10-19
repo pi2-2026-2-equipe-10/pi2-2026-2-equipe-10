@@ -45,7 +45,7 @@ export const BudgetsList: React.FC = () => {
         <div>
           <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Orçamentos & Propostas</h2>
           <p className="auth-description" style={{ textAlign: 'left' }}>
-            Consulte orçamentos gerados, finalize rascunhos e emita novas propostas (RF006 a RF009)
+            Consulte orçamentos gerados, finalize rascunhos e emita novas propostas
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>

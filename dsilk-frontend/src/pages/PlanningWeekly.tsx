@@ -150,7 +150,7 @@ export const PlanningWeekly: React.FC = () => {
         <div>
           <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Planejamento Semanal</h2>
           <p className="auth-description" style={{ textAlign: 'left' }}>
-            Acompanhe a fila de produção e atividades agendadas da semana (RF010 e RF011)
+            Acompanhe a fila de produção e atividades agendadas da semana
           </p>
         </div>
 
@@ -324,7 +324,7 @@ export const PlanningWeekly: React.FC = () => {
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <CalendarIcon size={20} color="var(--dsilk-cyan)" />
-                <h3>{atividadeEmEdicao ? 'Editar Atividade' : 'Nova Atividade (RF011)'}</h3>
+                <h3>{atividadeEmEdicao ? 'Editar Atividade' : 'Nova Atividade'}</h3>
               </div>
               <button type="button" className="modal-close-btn" onClick={fecharModal}>
                 <X size={20} />

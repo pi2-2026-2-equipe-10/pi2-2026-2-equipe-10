@@ -241,7 +241,7 @@ export const BudgetCalculator: React.FC = () => {
                 {orcamentoIdParam ? `Orçamento #${orcamentoIdParam}` : 'Criação e Cálculo de Orçamento'}
               </h2>
               <p className="auth-description" style={{ textAlign: 'left', fontSize: '0.85rem' }}>
-                Selecione o cliente, o serviço e calcule dinamicamente os valores (RF006, RF007, RF008)
+                Selecione o cliente, o serviço e calcule dinamicamente os valores
               </p>
             </div>
           </div>
@@ -520,7 +520,7 @@ export const BudgetCalculator: React.FC = () => {
         <div className="modal-overlay" onClick={() => setModalClienteAberto(false)}>
           <div className="modal-container" style={{ maxWidth: '450px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Cadastrar Novo Cliente (RF003)</h3>
+              <h3>Cadastrar Novo Cliente</h3>
               <button type="button" className="modal-close-btn" onClick={() => setModalClienteAberto(false)}>
                 <X size={20} />
               </button>
