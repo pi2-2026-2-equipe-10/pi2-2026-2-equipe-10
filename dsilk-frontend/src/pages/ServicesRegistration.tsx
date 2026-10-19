@@ -106,7 +106,7 @@ export const ServicesRegistration: React.FC = () => {
             </div>
             <div>
               <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.2rem', fontSize: '1.4rem' }}>
-                Novo Serviço Personalizado (RF004)
+                Novo Serviço Personalizado
               </h2>
               <p className="auth-description" style={{ textAlign: 'left', fontSize: '0.85rem' }}>
                 Defina o nome e a regra de precificação do serviço
@@ -208,7 +208,7 @@ export const ServicesRegistration: React.FC = () => {
             {tipoCalculo === 'METRAGEM' ? (
               <div style={{ marginBottom: '2rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>
-                  Material Associado (RN-03) *
+                  Material Associado *
                 </label>
                 {loadingMateriais ? (
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>Carregando materiais disponíveis...</p>

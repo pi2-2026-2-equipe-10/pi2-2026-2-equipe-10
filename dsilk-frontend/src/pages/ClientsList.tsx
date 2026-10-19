@@ -99,7 +99,7 @@ export const ClientsList: React.FC = () => {
         <div>
           <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Clientes</h2>
           <p className="auth-description" style={{ textAlign: 'left' }}>
-            Consulte e cadastre clientes para orçamentos e pedidos (RF003)
+            Centralize contatos e histórico de pedidos
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
