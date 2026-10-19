@@ -11,8 +11,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +28,18 @@ public class OrcamentoController {
 
     public record CustoCalculado(double custo) {}
 
+    // Dados do orçamento já lidos, validados e prontos para gravar (usado por POST e PUT)
+    private record DadosOrcamento(
+            Integer clienteId,
+            Integer servicoId,
+            BigDecimal largura,
+            BigDecimal altura,
+            BigDecimal custoTotal,
+            boolean rascunho) {}
+
     // POST /orcamentos/calcular
+    // RN-01: serviço por composição exige composição cadastrada.
+    // RN-03: serviço por metragem = largura x altura x custo do material.
     @PostMapping("/calcular")
     public CustoCalculado calcular(@RequestBody(required = false) Map<String, Object> corpo) {
         Object servicoIdObj = corpo == null ? null : corpo.get("servicoId");
@@ -164,74 +173,96 @@ public class OrcamentoController {
                 .orElseThrow(() -> new ApiException(404, "Orçamento não encontrado."));
     }
 
-    // POST /orcamentos
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Orcamento criar(@RequestBody(required = false) Map<String, Object> corpo) {
+    private static boolean vazio(Object valor) {
+        return valor == null || (valor instanceof String s && s.isBlank());
+    }
+
+    // Id opcional: ausente, texto vazio ou 0 significam "não informado".
+    // Qualquer outro valor precisa ser um inteiro positivo, senão 400.
+    private static Integer idOpcional(Object valor, String campo) {
+        if (vazio(valor)) return null;
+        Double n = Validacao.numero(valor);
+        if (n == null || n < 0 || n != Math.floor(n)) {
+            throw new ApiException(400, "O campo '" + campo + "' deve ser um número inteiro maior que zero.");
+        }
+        return n == 0 ? null : n.intValue();
+    }
+
+    // Dimensão opcional: ausente, vazia ou 0 significam "não informada" (o cálculo por
+    // metragem exige valor positivo e rejeita por conta própria). Texto não numérico ou
+    // valor negativo geram 400.
+    private static BigDecimal dimensaoOpcional(Object valor, String campo) {
+        if (vazio(valor)) return null;
+        Double n = Validacao.numero(valor);
+        if (n == null) {
+            throw new ApiException(400, "O campo '" + campo + "' deve ser numérico.");
+        }
+        if (n < 0) {
+            throw new ApiException(400, "O campo '" + campo + "' não pode ser negativo.");
+        }
+        if (n == 0) return null;
+        return BigDecimal.valueOf(n).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    // Lê e valida o corpo de POST e PUT (as regras são as mesmas nos dois)
+    private DadosOrcamento lerDados(Map<String, Object> corpo) {
         boolean rascunho = corpo != null && Boolean.TRUE.equals(corpo.get("rascunho"));
 
-        Object clienteIdObj = corpo == null ? null : corpo.get("clienteId");
-        Object servicoIdObj = corpo == null ? null : corpo.get("servicoId");
-        Object largObj = corpo == null ? null : corpo.get("largura");
-        Object altObj = corpo == null ? null : corpo.get("altura");
+        Integer clienteId = idOpcional(corpo == null ? null : corpo.get("clienteId"), "clienteId");
+        Integer servicoId = idOpcional(corpo == null ? null : corpo.get("servicoId"), "servicoId");
+        BigDecimal largura = dimensaoOpcional(corpo == null ? null : corpo.get("largura"), "largura");
+        BigDecimal altura = dimensaoOpcional(corpo == null ? null : corpo.get("altura"), "altura");
 
-        Integer clienteId = null;
-        if (clienteIdObj != null) {
-            Double cNum = Validacao.numeroPositivo(clienteIdObj);
-            if (cNum != null) {
-                clienteId = cNum.intValue();
+        // RN-04: o cliente é opcional, mas, se informado, precisa existir
+        if (clienteId != null) {
+            boolean existe = jdbc.sql("SELECT COUNT(*) FROM cliente WHERE id = :id")
+                    .param("id", clienteId)
+                    .query(Integer.class)
+                    .single() > 0;
+            if (!existe) {
+                throw new ApiException(404, "Cliente não encontrado.");
             }
         }
 
-        Integer servicoId = null;
-        if (servicoIdObj != null) {
-            Double sNum = Validacao.numeroPositivo(servicoIdObj);
-            if (sNum != null) {
-                servicoId = sNum.intValue();
+        if (servicoId != null) {
+            boolean existe = jdbc.sql("SELECT COUNT(*) FROM servico WHERE id = :id")
+                    .param("id", servicoId)
+                    .query(Integer.class)
+                    .single() > 0;
+            if (!existe) {
+                throw new ApiException(404, "Serviço não encontrado.");
             }
         }
 
-        BigDecimal largDb = null;
-        BigDecimal altDb = null;
-        BigDecimal custoTotalDb = null;
-
+        BigDecimal custoTotal = null;
         if (!rascunho) {
             if (servicoId == null) {
                 throw new ApiException(400, "O campo 'servicoId' é obrigatório para registrar orçamento.");
             }
             CustoCalculado calc = calcular(corpo);
-            custoTotalDb = BigDecimal.valueOf(calc.custo()).setScale(2, RoundingMode.HALF_UP);
-
-            if (largObj != null) {
-                Double l = Validacao.numeroPositivo(largObj);
-                if (l != null) largDb = BigDecimal.valueOf(l).setScale(2, RoundingMode.HALF_UP);
-            }
-            if (altObj != null) {
-                Double a = Validacao.numeroPositivo(altObj);
-                if (a != null) altDb = BigDecimal.valueOf(a).setScale(2, RoundingMode.HALF_UP);
-            }
-        } else {
-            if (largObj != null) {
-                Double l = Validacao.numeroPositivo(largObj);
-                if (l != null) largDb = BigDecimal.valueOf(l).setScale(2, RoundingMode.HALF_UP);
-            }
-            if (altObj != null) {
-                Double a = Validacao.numeroPositivo(altObj);
-                if (a != null) altDb = BigDecimal.valueOf(a).setScale(2, RoundingMode.HALF_UP);
-            }
+            custoTotal = BigDecimal.valueOf(calc.custo()).setScale(2, RoundingMode.HALF_UP);
         }
+
+        return new DadosOrcamento(clienteId, servicoId, largura, altura, custoTotal, rascunho);
+    }
+
+    // POST /orcamentos
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Orcamento criar(@RequestBody(required = false) Map<String, Object> corpo) {
+        DadosOrcamento d = lerDados(corpo);
 
         int novoId = jdbc.sql("""
                 INSERT INTO orcamento (cliente_id, servico_id, largura, altura, custo_total, rascunho, criado_em)
                 VALUES (:clienteId, :servicoId, :largura, :altura, :custoTotal, :rascunho, NOW())
                 RETURNING id
                 """)
-                .param("clienteId", clienteId)
-                .param("servicoId", servicoId)
-                .param("largura", largDb)
-                .param("altura", altDb)
-                .param("custoTotal", custoTotalDb)
-                .param("rascunho", rascunho)
+                .param("clienteId", d.clienteId())
+                .param("servicoId", d.servicoId())
+                .param("largura", d.largura())
+                .param("altura", d.altura())
+                .param("custoTotal", d.custoTotal())
+                .param("rascunho", d.rascunho())
                 .query(Integer.class)
                 .single();
 
@@ -241,47 +272,8 @@ public class OrcamentoController {
     // PUT /orcamentos/{id}
     @PutMapping("/{id}")
     public Orcamento atualizar(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
-        Orcamento orcExistente = buscar(id);
-
-        boolean rascunho = corpo != null && Boolean.TRUE.equals(corpo.get("rascunho"));
-
-        Object clienteIdObj = corpo == null ? null : corpo.get("clienteId");
-        Object servicoIdObj = corpo == null ? null : corpo.get("servicoId");
-        Object largObj = corpo == null ? null : corpo.get("largura");
-        Object altObj = corpo == null ? null : corpo.get("altura");
-
-        Integer clienteId = null;
-        if (clienteIdObj != null) {
-            Double cNum = Validacao.numeroPositivo(clienteIdObj);
-            if (cNum != null) clienteId = cNum.intValue();
-        }
-
-        Integer servicoId = null;
-        if (servicoIdObj != null) {
-            Double sNum = Validacao.numeroPositivo(servicoIdObj);
-            if (sNum != null) servicoId = sNum.intValue();
-        }
-
-        BigDecimal largDb = null;
-        BigDecimal altDb = null;
-        BigDecimal custoTotalDb = null;
-
-        if (!rascunho) {
-            if (servicoId == null) {
-                throw new ApiException(400, "O campo 'servicoId' é obrigatório.");
-            }
-            CustoCalculado calc = calcular(corpo);
-            custoTotalDb = BigDecimal.valueOf(calc.custo()).setScale(2, RoundingMode.HALF_UP);
-
-            if (largObj != null) {
-                Double l = Validacao.numeroPositivo(largObj);
-                if (l != null) largDb = BigDecimal.valueOf(l).setScale(2, RoundingMode.HALF_UP);
-            }
-            if (altObj != null) {
-                Double a = Validacao.numeroPositivo(altObj);
-                if (a != null) altDb = BigDecimal.valueOf(a).setScale(2, RoundingMode.HALF_UP);
-            }
-        }
+        Orcamento existente = buscar(id);
+        DadosOrcamento d = lerDados(corpo);
 
         jdbc.sql("""
                 UPDATE orcamento
@@ -289,13 +281,13 @@ public class OrcamentoController {
                     altura = :altura, custo_total = :custoTotal, rascunho = :rascunho
                 WHERE id = :id
                 """)
-                .param("clienteId", clienteId)
-                .param("servicoId", servicoId)
-                .param("largura", largDb)
-                .param("altura", altDb)
-                .param("custoTotal", custoTotalDb)
-                .param("rascunho", rascunho)
-                .param("id", orcExistente.id())
+                .param("clienteId", d.clienteId())
+                .param("servicoId", d.servicoId())
+                .param("largura", d.largura())
+                .param("altura", d.altura())
+                .param("custoTotal", d.custoTotal())
+                .param("rascunho", d.rascunho())
+                .param("id", existente.id())
                 .update();
 
         return buscar(id);

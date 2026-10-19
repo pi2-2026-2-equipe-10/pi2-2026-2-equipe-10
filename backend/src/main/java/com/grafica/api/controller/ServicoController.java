@@ -7,6 +7,7 @@ import com.grafica.api.model.Servico;
 import com.grafica.api.util.Validacao;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,6 +27,9 @@ public class ServicoController {
     public ServicoController(JdbcClient jdbc) {
         this.jdbc = jdbc;
     }
+
+    // Item de composição já validado (RN-02), pronto para gravar
+    private record ItemValidado(int materialId, BigDecimal quantidade) {}
 
     private static Material mapearMaterial(ResultSet rs, int i) throws SQLException {
         return new Material(
@@ -194,7 +198,13 @@ public class ServicoController {
         return buscar(String.valueOf(novoId));
     }
 
+    // PUT /servicos/{id}/composicao
+    // RN-01: a composição é o que permite calcular o custo de um serviço do tipo COMPOSICAO.
+    // RN-02: todo material da composição precisa de quantidade informada.
+    // Tudo é validado ANTES de gravar, e a gravação é uma transação única: se algo falhar,
+    // a composição anterior do serviço é preservada.
     @PutMapping("/{id}/composicao")
+    @Transactional
     public Servico configurarComposicao(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
         Servico servico = buscar(id);
 
@@ -225,30 +235,23 @@ public class ServicoController {
             }
         }
 
-        // Atualiza tempos no serviço
-        jdbc.sql("""
-                UPDATE servico
-                SET tempo_operacao_horas = :tempo, custo_hora_operacao = :custoHora
-                WHERE id = :id
-                """)
-                .param("tempo", tempoDb)
-                .param("custoHora", custoHoraDb)
-                .param("id", servico.id())
-                .update();
-
-        // Remove itens antigos
-        jdbc.sql("DELETE FROM item_composicao WHERE servico_id = :id")
-                .param("id", servico.id())
-                .update();
-
-        // Insere novos itens
+        // 1) Valida todos os itens antes de tocar no banco
+        List<ItemValidado> validados = new ArrayList<>();
         for (Object itemObj : listaItens) {
-            if (!(itemObj instanceof Map<?, ?> item)) continue;
+            if (!(itemObj instanceof Map<?, ?> item)) {
+                throw new ApiException(400, "Cada item da composição deve informar 'materialId' e 'quantidade'.");
+            }
             Double matNum = Validacao.numeroPositivo(item.get("materialId"));
             Double qtdNum = Validacao.numeroPositivo(item.get("quantidade"));
 
-            if (matNum == null || qtdNum == null) {
+            if (matNum == null || matNum != Math.floor(matNum) || qtdNum == null) {
                 throw new ApiException(400, "Cada item deve possuir 'materialId' e 'quantidade' maiores que zero.");
+            }
+
+            // A coluna quantidade tem 3 casas decimais
+            BigDecimal quantidade = BigDecimal.valueOf(qtdNum).setScale(3, RoundingMode.HALF_UP);
+            if (quantidade.signum() <= 0) {
+                throw new ApiException(400, "A quantidade mínima por material é 0,001.");
             }
 
             boolean matExiste = jdbc.sql("SELECT COUNT(*) FROM material WHERE id = :id")
@@ -259,13 +262,32 @@ public class ServicoController {
                 throw new ApiException(404, "Material com id " + matNum.intValue() + " não encontrado.");
             }
 
+            validados.add(new ItemValidado(matNum.intValue(), quantidade));
+        }
+
+        // 2) Grava (dentro da transação)
+        jdbc.sql("""
+                UPDATE servico
+                SET tempo_operacao_horas = :tempo, custo_hora_operacao = :custoHora
+                WHERE id = :id
+                """)
+                .param("tempo", tempoDb)
+                .param("custoHora", custoHoraDb)
+                .param("id", servico.id())
+                .update();
+
+        jdbc.sql("DELETE FROM item_composicao WHERE servico_id = :id")
+                .param("id", servico.id())
+                .update();
+
+        for (ItemValidado item : validados) {
             jdbc.sql("""
                     INSERT INTO item_composicao (servico_id, material_id, quantidade)
                     VALUES (:servicoId, :materialId, :qtd)
                     """)
                     .param("servicoId", servico.id())
-                    .param("materialId", matNum.intValue())
-                    .param("qtd", BigDecimal.valueOf(qtdNum).setScale(4, RoundingMode.HALF_UP))
+                    .param("materialId", item.materialId())
+                    .param("qtd", item.quantidade())
                     .update();
         }
 

@@ -20,25 +20,30 @@ CREATE TABLE funcionario (
     ativo       BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+-- Índice parcial: só funcionários ativos, já ordenados por nome.
+-- Atende GET /funcionarios (WHERE ativo = TRUE ORDER BY nome).
+CREATE INDEX idx_funcionario_ativo_nome ON funcionario(nome) WHERE ativo = TRUE;
+
 -- ---------------------------------------------------------------------
 -- Cliente
--- Quem solicita orçamentos.
+-- Quem solicita orçamentos. O e-mail é opcional, mas quando informado
+-- não pode se repetir (o UNIQUE aceita vários NULL).
 -- ---------------------------------------------------------------------
 CREATE TABLE cliente (
     id            SERIAL PRIMARY KEY,
     nome          VARCHAR(150) NOT NULL,
     telefone      VARCHAR(20),
-    email         VARCHAR(150),
+    email         VARCHAR(150) UNIQUE,
     observacoes   TEXT
 );
 
 -- ---------------------------------------------------------------------
 -- Material
--- Insumo usado nos serviços, com custo por unidade.
+-- Insumo usado nos serviços, com custo por unidade. O nome é único.
 -- ---------------------------------------------------------------------
 CREATE TABLE material (
     id              SERIAL PRIMARY KEY,
-    nome            VARCHAR(150) NOT NULL,
+    nome            VARCHAR(150) NOT NULL UNIQUE,
     unidade_medida  VARCHAR(20) NOT NULL,
     custo           NUMERIC(12,2) NOT NULL CHECK (custo >= 0)
 );

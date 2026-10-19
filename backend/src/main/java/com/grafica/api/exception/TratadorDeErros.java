@@ -1,5 +1,7 @@
 package com.grafica.api.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -20,6 +22,28 @@ public class TratadorDeErros {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, String>> api(ApiException e) {
         return resposta(e.getStatus(), e.getMessage());
+    }
+
+    // Violação de UNIQUE no banco (ex.: material com nome repetido, cliente com e-mail repetido)
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<Map<String, String>> duplicado(DuplicateKeyException e) {
+        String detalhe = e.getMostSpecificCause().getMessage();
+        String mensagem = "Já existe um registro com este valor.";
+        if (detalhe != null) {
+            if (detalhe.contains("material_nome_key")) {
+                mensagem = "Já existe um material com este nome.";
+            } else if (detalhe.contains("cliente_email_key")) {
+                mensagem = "Já existe um cliente com este e-mail.";
+            }
+        }
+        return resposta(409, mensagem);
+    }
+
+    // Violação de FK, CHECK, NOT NULL ou valor fora do limite da coluna
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> integridade(DataIntegrityViolationException e) {
+        return resposta(400, "Os dados informados violam uma restrição do banco "
+                + "(referência inexistente ou valor fora do permitido).");
     }
 
     // JSON malformado
