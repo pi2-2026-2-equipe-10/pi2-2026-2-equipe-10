@@ -1,53 +1,242 @@
 @url = http://localhost:3000
 @token = {{login.response.body.token}}
 
-### 1. Lista de funcionários ativos (200)
+# Banco recém-criado (docker compose down -v / up). IDs usados vêm do seed:
+# materiais 1-10, serviços 1-5 (METRAGEM) e 6-10 (COMPOSICAO), clientes 1-10.
+# Rode as requisições NA ORDEM: a 02 gera o token e a 17 cria o serviço usado nas 18 a 23.
+# Cada bloco informa o status esperado.
+
+############################################################
+# FUNCIONÁRIOS E LOGIN (RN-05)
+############################################################
+
+### 01 - Lista de funcionários ativos (200)
 GET {{url}}/funcionarios
 
-### 2. Login (200) - RODE ESTE ANTES DOS MATERIAIS
+### 02 - Login válido (200) - RODE ANTES DAS ROTAS PROTEGIDAS
 # @name login
 POST {{url}}/login
 Content-Type: application/json
 
 { "funcionarioId": 1, "senha": "123456" }
 
-### 3. Erro 401: senha incorreta
+### 03 - Senha incorreta (401)
 POST {{url}}/login
 Content-Type: application/json
 
 { "funcionarioId": 1, "senha": "errada" }
 
-### 4. Erro 400: campos ausentes
+### 04 - Campos ausentes (400)
 POST {{url}}/login
 Content-Type: application/json
 
 { "funcionarioId": 1 }
 
-### 5. Lista de materiais (200)
+### 05 - Funcionário inexistente (401)
+POST {{url}}/login
+Content-Type: application/json
+
+{ "funcionarioId": 99999, "senha": "123456" }
+
+############################################################
+# AUTENTICAÇÃO DAS ROTAS PROTEGIDAS (RN-05)
+############################################################
+
+### 06 - Sem token (401)
+GET {{url}}/materiais
+
+### 07 - Token inválido (401)
+GET {{url}}/materiais
+Authorization: Bearer token-invalido
+
+############################################################
+# MATERIAIS
+############################################################
+
+### 08 - Lista de materiais (200)
 GET {{url}}/materiais
 Authorization: Bearer {{token}}
 
-### 6. Material por id (200)
+### 09 - Material por id (200)
 GET {{url}}/materiais/1
 Authorization: Bearer {{token}}
 
-### 7. Erro 404: material não existe
+### 10 - Material inexistente (404)
 GET {{url}}/materiais/999
 Authorization: Bearer {{token}}
 
-### 8. Cadastrar material (201)
+### 11 - Cadastrar material (201) - o nome muda a cada envio
 POST {{url}}/materiais
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "nome": "Banner PVC", "unidadeMedida": "m²", "custo": "12.5" }
+{ "nome": "Material Teste {{$randomInt 1000 99999}}", "unidadeMedida": "m²", "custo": "12.5" }
 
-### 9. Erro 400: custo inválido
+### 12 - Custo inválido (400)
 POST {{url}}/materiais
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "nome": "Banner PVC", "unidadeMedida": "m²", "custo": 0 }
 
-### 10. Erro 401: sem token
-GET {{url}}/materiais
+### 13 - Nome duplicado (409) - "Lona Blackout" já existe no seed
+POST {{url}}/materiais
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Lona Blackout", "unidadeMedida": "m²", "custo": 20 }
+
+############################################################
+# SERVIÇOS
+############################################################
+
+### 14 - Cadastrar serviço por metragem (201)
+POST {{url}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Servico Metragem {{$randomInt 1000 99999}}", "tipoCalculo": "METRAGEM", "materialId": 4 }
+
+### 15 - Metragem sem materialId (400)
+POST {{url}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Sem material", "tipoCalculo": "METRAGEM" }
+
+### 16 - Tipo de cálculo inválido (400)
+POST {{url}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Tipo errado", "tipoCalculo": "OUTRO" }
+
+### 17 - Cadastrar serviço por composição, ainda SEM composição (201)
+# @name servicoComposicao
+POST {{url}}/servicos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "nome": "Servico Composicao {{$randomInt 1000 99999}}", "tipoCalculo": "COMPOSICAO" }
+
+############################################################
+# COMPOSIÇÃO (RN-01 e RN-02) - usa o serviço criado na 17
+############################################################
+
+### 18 - RN-01: calcular serviço por composição sem composição cadastrada (400)
+POST {{url}}/orcamentos/calcular
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": {{servicoComposicao.response.body.id}} }
+
+### 19 - RN-02: item sem quantidade (400)
+PUT {{url}}/servicos/{{servicoComposicao.response.body.id}}/composicao
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "itens": [ { "materialId": 3 } ] }
+
+### 20 - Configurar composição válida (200) - 2 itens, 1 h de operação a R$ 10,00
+PUT {{url}}/servicos/{{servicoComposicao.response.body.id}}/composicao
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "itens": [
+    { "materialId": 3, "quantidade": 2 },
+    { "materialId": 1, "quantidade": 1 }
+  ],
+  "tempoOperacaoHoras": 1,
+  "custoHoraOperacao": 10
+}
+
+### 21 - Material inexistente na composição (404) - a composição da 20 deve ser preservada
+PUT {{url}}/servicos/{{servicoComposicao.response.body.id}}/composicao
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "itens": [ { "materialId": 99999, "quantidade": 1 } ] }
+
+### 22 - Conferir que a composição continua com os 2 itens (200)
+GET {{url}}/servicos/{{servicoComposicao.response.body.id}}
+Authorization: Bearer {{token}}
+
+### 23 - RN-01: calcular com composição configurada (200) - esperado 42.3
+# (2 x 9,90) + (1 x 12,50) + (1 h x R$ 10,00)
+POST {{url}}/orcamentos/calcular
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": {{servicoComposicao.response.body.id}} }
+
+############################################################
+# CÁLCULO E ORÇAMENTOS (RN-03 e RN-04)
+############################################################
+
+### 24 - RN-03: cálculo por metragem (200) - esperado 54.0 (2,5 x 1,2 m x R$ 18,00)
+POST {{url}}/orcamentos/calcular
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": 1, "largura": 2.5, "altura": 1.2 }
+
+### 25 - Metragem sem altura (400)
+POST {{url}}/orcamentos/calcular
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": 1, "largura": 2.5 }
+
+### 26 - Cálculo por composição do seed (200) - esperado 13.85
+POST {{url}}/orcamentos/calcular
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": 6 }
+
+### 27 - Serviço inexistente (404)
+POST {{url}}/orcamentos/calcular
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": 99999 }
+
+### 28 - RN-04: registrar orçamento SEM cliente (201)
+POST {{url}}/orcamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "servicoId": 1, "largura": 2.5, "altura": 1.2 }
+
+### 29 - Cliente informado, mas inexistente (404)
+POST {{url}}/orcamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "clienteId": 99999, "servicoId": 1, "largura": 2.5, "altura": 1.2 }
+
+### 30 - clienteId inválido (400)
+POST {{url}}/orcamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "clienteId": "abc", "servicoId": 1, "largura": 2.5, "altura": 1.2 }
+
+### 31 - Orçamento registrado sem servicoId (400)
+POST {{url}}/orcamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "clienteId": 1 }
+
+### 32 - Rascunho sem serviço e sem cliente (201)
+POST {{url}}/orcamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "rascunho": true }
+
+### 33 - Lista de orçamentos (200)
+GET {{url}}/orcamentos
+Authorization: Bearer {{token}}
