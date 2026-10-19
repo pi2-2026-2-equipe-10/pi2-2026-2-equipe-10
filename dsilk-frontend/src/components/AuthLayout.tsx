@@ -10,12 +10,17 @@ interface AuthLayoutProps {
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
   return (
     <div className="auth-layout">
-      {/* Left Sidebar - Branding */}
+      {/* Left Sidebar - Branding (Figma Image 2) */}
       <div className="auth-sidebar">
-        <h1 className="auth-sidebar-title">Gestão Inteligente</h1>
-        <p className="auth-sidebar-subtitle">
-          Sistema interno de orçamentos e planejamento para a gráfica Dsilk.
-        </p>
+        <h1 className="auth-sidebar-title" style={{ fontSize: '2rem', fontWeight: 700, color: '#334155' }}>
+          Gestão simples para ideias que ganham forma.
+        </h1>
+        <div style={{ display: 'flex', width: '120px', height: '5px', marginTop: '1.5rem', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ flex: 1, backgroundColor: '#009FE3' }}></div>
+          <div style={{ flex: 1, backgroundColor: '#E6007E' }}></div>
+          <div style={{ flex: 1, backgroundColor: '#FFD100' }}></div>
+          <div style={{ flex: 1, backgroundColor: '#18181B' }}></div>
+        </div>
       </div>
 
       {/* Right Side - Auth Content */}

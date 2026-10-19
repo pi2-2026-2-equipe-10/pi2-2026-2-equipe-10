@@ -66,7 +66,7 @@ export const Login: React.FC = () => {
     try {
       setSubmitting(true);
       await authService.login(Number(selectedFuncionarioId), senha);
-      navigate('/materials');
+      navigate('/overview');
     } catch (error) {
       setErro(getApiErrorMessage(error, 'Falha ao autenticar. Verifique suas credenciais.'));
     } finally {

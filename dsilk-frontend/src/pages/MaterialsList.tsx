@@ -4,7 +4,7 @@ import { DashboardLayout } from '../components/DashboardLayout';
 import { Button } from '../components/Button';
 import { materialService, Material } from '../services/materialService';
 import { getApiErrorMessage } from '../types/api';
-import { RefreshCw, Plus, AlertCircle, Package } from 'lucide-react';
+import { RefreshCw, AlertCircle, Package } from 'lucide-react';
 
 export const MaterialsList: React.FC = () => {
   const navigate = useNavigate();
@@ -32,29 +32,29 @@ export const MaterialsList: React.FC = () => {
 
   return (
     <DashboardLayout activeMenu="Materiais">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem' }}>
         <div>
-          <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Materiais</h2>
-          <p className="auth-description" style={{ textAlign: 'left' }}>Consultar materiais cadastrados</p>
+          <div className="category-breadcrumb">INSUMOS</div>
+          <h1 className="page-main-title">Materiais</h1>
+          <p className="page-main-subtitle">Consultar materiais e insumos cadastrados no sistema.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
             onClick={carregarMateriais}
             disabled={loading}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            atualizar
-          </Button>
-          <Button 
-            variant="primary" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            Atualizar
+          </button>
+          <button 
+            type="button"
+            className="btn-dark" 
             onClick={() => navigate('/materials/new')}
           >
-            <Plus size={16} />
-            novo material
-          </Button>
+            + Novo Material
+          </button>
         </div>
       </div>
 
@@ -130,17 +130,9 @@ export const MaterialsList: React.FC = () => {
                     <button 
                       type="button"
                       onClick={() => navigate(`/materials/edit/${mat.id}`)} 
-                      style={{ 
-                        background: 'none', 
-                        border: 'none', 
-                        textDecoration: 'underline', 
-                        color: 'var(--primary-color, #2563eb)', 
-                        fontSize: '0.9rem', 
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                      }}
+                      className="table-action-link"
                     >
-                      editar
+                      Editar
                     </button>
                   </td>
                 </tr>

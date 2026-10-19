@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Input } from '../components/Input';
-import { Button } from '../components/Button';
 import { materialService } from '../services/materialService';
 import { getApiErrorMessage } from '../types/api';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -98,11 +97,12 @@ export const MaterialsRegistration: React.FC = () => {
 
   return (
     <DashboardLayout activeMenu="Materiais">
-      <div style={{ marginBottom: '2.5rem' }}>
-        <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>
+      <div style={{ marginBottom: '1.75rem' }}>
+        <div className="category-breadcrumb">INSUMOS</div>
+        <h1 className="page-main-title">
           {isEditing ? 'Editar Material' : 'Novo Material'}
-        </h2>
-        <p className="auth-description" style={{ textAlign: 'left' }}>
+        </h1>
+        <p className="page-main-subtitle">
           {isEditing ? 'Editar dados e custo do material cadastrado' : 'Cadastrar dados e custo do material'}
         </p>
       </div>
@@ -176,24 +176,22 @@ export const MaterialsRegistration: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-              <Button 
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+              <button 
                 type="button" 
-                variant="outline" 
-                style={{ width: 'auto' }} 
+                className="btn-outline-figma" 
                 onClick={() => navigate('/materials')}
                 disabled={submitting}
               >
-                cancelar
-              </Button>
-              <Button 
+                Cancelar
+              </button>
+              <button 
                 type="submit" 
-                variant="primary" 
-                style={{ width: 'auto' }}
+                className="btn-dark"
                 disabled={submitting}
               >
-                {submitting ? 'salvando...' : isEditing ? 'atualizar material' : 'salvar material'}
-              </Button>
+                {submitting ? 'Salvando...' : isEditing ? 'Atualizar Material' : 'Salvar Material'}
+              </button>
             </div>
             
           </form>

@@ -12,6 +12,7 @@ import { BudgetsList } from './pages/BudgetsList';
 import { BudgetCalculator } from './pages/BudgetCalculator';
 import { PlanningWeekly } from './pages/PlanningWeekly';
 import { ClientsList } from './pages/ClientsList';
+import { Overview } from './pages/Overview';
 
 import './styles/dashboard.css';
 
@@ -19,6 +20,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Dashboard Overview (Figma Image 1) */}
+        <Route path="/overview" element={<Overview />} />
+        <Route path="/dashboard" element={<Navigate to="/overview" replace />} />
         {/* Auth Routes */}
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />

@@ -6,7 +6,6 @@ import { clienteService, Cliente } from '../services/clienteService';
 import { getApiErrorMessage } from '../types/api';
 import { 
   Users, 
-  Plus, 
   RefreshCw, 
   AlertCircle, 
   CheckCircle, 
@@ -95,31 +94,31 @@ export const ClientsList: React.FC = () => {
 
   return (
     <DashboardLayout activeMenu="Clientes">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem' }}>
         <div>
-          <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Clientes</h2>
-          <p className="auth-description" style={{ textAlign: 'left' }}>
-            Consulte e cadastre clientes para orçamentos e pedidos (RF003)
+          <div className="category-breadcrumb">CONTATOS</div>
+          <h1 className="page-main-title">Clientes</h1>
+          <p className="page-main-subtitle">
+            Consulte e cadastre clientes para orçamentos e pedidos.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
             onClick={carregarClientes}
             disabled={loading}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             Atualizar
-          </Button>
-          <Button 
-            variant="primary" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          </button>
+          <button 
+            type="button"
+            className="btn-dark" 
             onClick={abrirModal}
           >
-            <Plus size={16} />
-            Novo Cliente
-          </Button>
+            + Novo Cliente
+          </button>
         </div>
       </div>
 
