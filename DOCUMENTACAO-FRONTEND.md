@@ -1,6 +1,6 @@
 # Documentação das Entregas de Frontend — Sistema Dsilk (Equipe 10)
 
-Este documento consolida as evidências, arquitetura, rastreabilidade e comprovação de atendimento aos critérios de avaliação das entregas de **Frontend 1**, **Frontend 2** e **Frontend 3 (Equipes com 9 pessoas)** do Projeto Integrador 2 (PI2).
+Este documento consolida as evidências, arquitetura, rastreabilidade e comprovação de atendimento aos critérios de avaliação das entregas de **Frontend 1**, **Frontend 2** e **Frontend 3
 
 ---
 
