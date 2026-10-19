@@ -11,7 +11,7 @@ import { ServicesRegistration } from './pages/ServicesRegistration';
 import { BudgetsList } from './pages/BudgetsList';
 import { BudgetCalculator } from './pages/BudgetCalculator';
 import { PlanningWeekly } from './pages/PlanningWeekly';
-import { PlaceholderPage } from './pages/PlaceholderPage';
+import { ClientsList } from './pages/ClientsList';
 
 import './styles/dashboard.css';
 
@@ -44,7 +44,7 @@ function App() {
         <Route path="/planning" element={<PlanningWeekly />} />
 
         {/* Clients Module */}
-        <Route path="/clients" element={<PlaceholderPage title="Clientes" activeMenu="Clientes" />} />
+        <Route path="/clients" element={<ClientsList />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
