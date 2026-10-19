@@ -99,7 +99,7 @@ export const ClientsList: React.FC = () => {
           <div className="category-breadcrumb">CONTATOS</div>
           <h1 className="page-main-title">Clientes</h1>
           <p className="page-main-subtitle">
-            Consulte e cadastre clientes para orçamentos e pedidos.
+            Centralize contatos e histórico de pedidos.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>

@@ -40,6 +40,10 @@
   user-select: none;
 }
 
+.dashboard-logo .logo-container {
+  margin-bottom: 0 !important;
+}
+
 .dashboard-logo .logo-icon {
   width: 32px;
   height: 32px;

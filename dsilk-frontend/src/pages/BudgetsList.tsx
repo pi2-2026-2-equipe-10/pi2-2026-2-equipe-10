@@ -46,7 +46,7 @@ export const BudgetsList: React.FC = () => {
           <div className="category-breadcrumb">PROPOSTAS</div>
           <h1 className="page-main-title">Orçamentos</h1>
           <p className="page-main-subtitle">
-            Consulte orçamentos gerados, finalize rascunhos e emita novas propostas comerciais.
+            Consulte orçamentos gerados, finalize rascunhos e emita novas propostas.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>

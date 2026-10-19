@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, LogOut } from 'lucide-react';
 import { getUser, clearSession } from '../services/storage';
+import { Logo } from './Logo';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -47,14 +48,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
             className="dashboard-logo" 
             onClick={() => navigate('/overview')}
             title="Ir para Visão Geral"
+            style={{ cursor: 'pointer' }}
           >
-            <div className="logo-icon">
-              <div className="logo-blade blade-cyan"></div>
-              <div className="logo-blade blade-magenta"></div>
-              <div className="logo-blade blade-yellow"></div>
-              <div className="logo-blade blade-black"></div>
-            </div>
-            <span className="logo-text">Dsilk</span>
+            <Logo size={36} />
           </div>
         </div>
         

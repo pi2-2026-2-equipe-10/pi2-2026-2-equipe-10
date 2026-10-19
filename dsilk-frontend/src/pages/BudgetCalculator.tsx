@@ -587,7 +587,7 @@ export const BudgetCalculator: React.FC = () => {
             style={{ width: '100%', maxWidth: '480px', margin: 0, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Novo Cliente</h3>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Cadastrar Novo Cliente</h3>
               <button 
                 type="button" 
                 onClick={() => setModalClienteAberto(false)}

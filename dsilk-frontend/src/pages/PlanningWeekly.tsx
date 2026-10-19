@@ -329,7 +329,7 @@ export const PlanningWeekly: React.FC = () => {
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <CalendarIcon size={20} color="var(--dsilk-cyan)" />
-                <h3>{atividadeEmEdicao ? 'Editar Atividade' : 'Nova Atividade (RF011)'}</h3>
+                <h3>{atividadeEmEdicao ? 'Editar Atividade' : 'Nova Atividade'}</h3>
               </div>
               <button type="button" className="modal-close-btn" onClick={fecharModal}>
                 <X size={20} />
