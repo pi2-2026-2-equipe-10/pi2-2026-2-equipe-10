@@ -4,6 +4,7 @@ import { setToken, setUser, clearSession } from './storage';
 export interface Funcionario {
   id: number;
   nome: string;
+  perfil?: string;
 }
 
 export interface LoginResponse {
@@ -11,7 +12,15 @@ export interface LoginResponse {
   funcionario: {
     id: number;
     nome: string;
+    perfil: string;
   };
+}
+
+export interface CadastrarFuncionarioData {
+  nome: string;
+  senha: string;
+  perfil?: 'ADMINISTRADOR' | 'FUNCIONARIO' | string;
+  ativo?: boolean;
 }
 
 export const authService = {
@@ -36,7 +45,17 @@ export const authService = {
     setUser({
       id: funcionario.id,
       nome: funcionario.nome,
+      perfil: funcionario.perfil,
     });
+    return response.data;
+  },
+
+  /**
+   * Cadastra um novo funcionário no sistema (RF012).
+   * Operação permitida apenas para o perfil ADMINISTRADOR.
+   */
+  async cadastrarFuncionario(dados: CadastrarFuncionarioData): Promise<Funcionario> {
+    const response = await api.post<Funcionario>('/funcionarios', dados);
     return response.data;
   },
 

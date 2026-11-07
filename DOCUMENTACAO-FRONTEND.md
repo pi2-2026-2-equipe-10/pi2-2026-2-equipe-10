@@ -55,6 +55,14 @@ Todas as telas operam consumindo dados reais do banco PostgreSQL através da API
 
 ---
 
+### 1.3 Redirecionamento e Proteção de Rotas (`ProtectedRoute`)
+
+O sistema conta com um guardião de rotas centralizado implementado em `dsilk-frontend/src/components/ProtectedRoute.tsx`:
+- Todas as rotas autenticadas da aplicação (`/overview`, `/materials`, `/services`, `/budgets`, `/planning`, `/clients`) são envolvidas por `<ProtectedRoute>`.
+- Caso um usuário não autenticado tente acessar diretamente qualquer URL protegida, a aplicação intercepta imediatamente antes da renderização e executa o redirecionamento automático para a tela de login (`/login`), preservando o histórico de navegação.
+
+---
+
 ## 2. Frontend 2
 
 ### 2.1 As 3 Telas do Fluxo Principal (Sem Mock)
@@ -104,6 +112,18 @@ Todas as telas da aplicação cobrem explicitamente os **4 estados fundamentais 
 
 ---
 
+### 2.3 Interface Adaptada ao Perfil e Ocultação de Ações Não Permitidas
+
+Conforme a Matriz de Requisitos (`docs/perfis-de-acesso.md`), o sistema possui dois perfis: **Administrador** e **Funcionário**. Apenas o perfil Administrador tem permissão para gerenciar a equipe de funcionários.
+
+A interface gráfica em `DashboardLayout.tsx` adapta-se dinamicamente ao perfil do usuário logado:
+- **Exibição do Cargo Real:** O cabeçalho lê a claim `perfil` gravada no momento do login e exibe dinamicamente o cargo real (`"Administrador"` ou `"Funcionário"`).
+- **Ocultação de Ações Não Permitidas:**
+  - O botão de ação e modal **`+ Colaborador`** (para cadastro de novos colaboradores via `POST /funcionarios`) é renderizado **exclusivamente para o perfil Administrador**.
+  - Quando um usuário autenticado com perfil `FUNCIONARIO` utiliza o sistema, o botão de gerenciar funcionários é **completamente ocultado da tela**, garantindo que o usuário visualize apenas as ações que possui permissão para executar.
+
+---
+
 ## 3. Frontend 3 (Equipes com 9 Pessoas)
 
 ### 3.1 As 2 Telas do Fluxo Principal (Sem Mock)
@@ -125,6 +145,30 @@ Todas as telas da aplicação cobrem explicitamente os **4 estados fundamentais 
 - **Tabela Relacional**: `atividade`
 - **Requisitos Atendidos**: `RF-10` (Visualizar Planejamento Semanal) e `RF-11` (Registrar Atividade)
 - **Sem Mock**: Persistência direta na tabela `atividade` com sincronização imediata do calendário.
+
+---
+
+### 3.2 Tratamento de Sessão Expirada (401) e Respostas 403 Forbidden com Mensagens do Design
+
+O cliente HTTP Axios (`dsilk-frontend/src/services/api.ts`) e a camada de componentes tratam as respostas de autorização e autenticação através de mensagens amigáveis elaboradas pela equipe de Design:
+
+1. **Tratamento de Sessão Expirada (401 Unauthorized):**
+   - Ao receber `401` do backend (token expirado após 12h ou inválido), a sessão é limpa no `localStorage`, grava-se o aviso amigável na sessão e o usuário é redirecionado para `/login?expired=1`.
+   - Na tela de login, um banner azul com ícone `Info` exibe a mensagem de design:
+     > *"Sua sessão expirou por inatividade ou segurança. Faça login novamente para continuar."*
+2. **Tratamento de Acesso Negado por Perfil (403 Forbidden):**
+   - Ao receber `403` do backend (tentativa de operação não autorizada para o perfil), o interceptor emite um evento global `dsilk:forbidden`.
+   - O `DashboardLayout.tsx` captura o evento e renderiza um alerta vermelho fixado no topo da área de conteúdo com ícone `ShieldAlert`:
+     > *"Acesso negado: seu perfil de usuário não tem permissão para realizar esta operação."*
+
+---
+
+### 3.3 Verificação em Dispositivo Real das Telas em Rede Local
+
+A aplicação foi executada e homologada em **dispositivo real (smartphone)** conectado à mesma rede local Wi-Fi, conforme documentado em detalhes em [`docs/testes/evidencias/verificacao-dispositivo-real.md`](docs/testes/evidencias/verificacao-dispositivo-real.md):
+- **Exposição de Rede:** O servidor Vite foi configurado com `server.host: '0.0.0.0'` na porta `5173`, permitindo acesso via `http://<IP-LOCAL>:5173`.
+- **Telas Verificadas no Smartphone:** Login, Visão Geral, Catálogo de Materiais, Cadastro de Materiais, Catálogo de Serviços, Calculadora de Orçamento e Planejamento Semanal.
+- **Usabilidade Tátil e Responsividade:** Formulários ajustados ao teclado virtual, botões com área de toque mínima de 44px, grades de cartões reorganizadas verticalmente e menus de fácil alcance para o operador gráfico em ambiente de chão de fábrica.
 
 ---
 

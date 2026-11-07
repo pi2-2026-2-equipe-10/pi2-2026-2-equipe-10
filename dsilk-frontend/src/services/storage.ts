@@ -9,6 +9,7 @@ export interface StoredUser {
   id?: number;
   nome: string;
   email?: string;
+  perfil?: 'ADMINISTRADOR' | 'FUNCIONARIO' | string;
 }
 
 export const getToken = (): string | null => {
