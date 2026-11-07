@@ -5,6 +5,10 @@ import com.grafica.api.model.ItemComposicao;
 import com.grafica.api.model.Material;
 import com.grafica.api.model.Servico;
 import com.grafica.api.util.Validacao;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +24,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/servicos")
+@Tag(name = "Serviços e Composições", description = "Catálogo de serviços gráficos e fichas técnicas de composição (RF004 e RF005)")
 public class ServicoController {
 
     private final JdbcClient jdbc;
@@ -40,6 +45,8 @@ public class ServicoController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar serviços (RF004)", description = "Retorna todos os serviços cadastrados na gráfica.")
+    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     public List<Servico> listar() {
         return jdbc.sql("""
                 SELECT s.id, s.nome, s.tipo_calculo, s.material_id, s.tempo_operacao_horas, s.custo_hora_operacao,
@@ -74,6 +81,12 @@ public class ServicoController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar serviço por ID (RF004/RF005)", description = "Retorna os detalhes de um serviço com materiais vinculados e itens da composição.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Serviço encontrado"),
+            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "404", description = "Serviço não encontrado")
+    })
     public Servico buscar(@PathVariable String id) {
         Double idNumerico = Validacao.numeroPositivo(id);
         if (idNumerico == null || idNumerico != Math.floor(idNumerico)) {
@@ -113,7 +126,6 @@ public class ServicoController {
                 .optional()
                 .orElseThrow(() -> new ApiException(404, "Serviço não encontrado."));
 
-        // Se for COMPOSICAO, carrega os itens
         if ("COMPOSICAO".equalsIgnoreCase(s.tipoCalculo())) {
             List<ItemComposicao> itens = jdbc.sql("""
                     SELECT ic.id, ic.servico_id, ic.material_id, ic.quantidade,
@@ -149,6 +161,12 @@ public class ServicoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Cadastrar serviço personalizado (RF004)", description = "Cadastra um serviço definindo o tipo de cálculo ('METRAGEM' ou 'COMPOSICAO').")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Serviço criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados ausentes ou tipo de cálculo inválido"),
+            @ApiResponse(responseCode = "404", description = "Material de metragem não encontrado")
+    })
     public Servico cadastrar(@RequestBody(required = false) Map<String, Object> corpo) {
         Object nome = corpo == null ? null : corpo.get("nome");
         Object tipoCalculo = corpo == null ? null : corpo.get("tipoCalculo");
@@ -172,7 +190,6 @@ public class ServicoController {
             if (matNum == null) {
                 throw new ApiException(400, "O campo 'materialId' é obrigatório para serviços do tipo METRAGEM.");
             }
-            // Verifica se o material existe
             boolean matExiste = jdbc.sql("SELECT COUNT(*) FROM material WHERE id = :id")
                     .param("id", matNum.intValue())
                     .query(Integer.class)
@@ -198,13 +215,15 @@ public class ServicoController {
         return buscar(String.valueOf(novoId));
     }
 
-    // PUT /servicos/{id}/composicao
-    // RN-01: a composição é o que permite calcular o custo de um serviço do tipo COMPOSICAO.
-    // RN-02: todo material da composição precisa de quantidade informada.
-    // Tudo é validado ANTES de gravar, e a gravação é uma transação única: se algo falhar,
-    // a composição anterior do serviço é preservada.
+    // PUT /servicos/{id}/composicao (RF005, RN-01, RN-02)
     @PutMapping("/{id}/composicao")
     @Transactional
+    @Operation(summary = "Configurar composição do serviço (RF005)", description = "Define a ficha técnica de insumos, quantidades e tempo de operação de serviços por composição.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Composição gravada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Serviço não é do tipo COMPOSICAO ou itens inválidos"),
+            @ApiResponse(responseCode = "404", description = "Serviço ou material não encontrado")
+    })
     public Servico configurarComposicao(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
         Servico servico = buscar(id);
 
@@ -235,7 +254,6 @@ public class ServicoController {
             }
         }
 
-        // 1) Valida todos os itens antes de tocar no banco
         List<ItemValidado> validados = new ArrayList<>();
         for (Object itemObj : listaItens) {
             if (!(itemObj instanceof Map<?, ?> item)) {
@@ -248,7 +266,6 @@ public class ServicoController {
                 throw new ApiException(400, "Cada item deve possuir 'materialId' e 'quantidade' maiores que zero.");
             }
 
-            // A coluna quantidade tem 3 casas decimais
             BigDecimal quantidade = BigDecimal.valueOf(qtdNum).setScale(3, RoundingMode.HALF_UP);
             if (quantidade.signum() <= 0) {
                 throw new ApiException(400, "A quantidade mínima por material é 0,001.");
@@ -265,7 +282,6 @@ public class ServicoController {
             validados.add(new ItemValidado(matNum.intValue(), quantidade));
         }
 
-        // 2) Grava (dentro da transação)
         jdbc.sql("""
                 UPDATE servico
                 SET tempo_operacao_horas = :tempo, custo_hora_operacao = :custoHora
