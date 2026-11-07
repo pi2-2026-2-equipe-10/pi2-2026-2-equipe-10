@@ -27,7 +27,13 @@ public class WebConfig implements WebMvcConfigurer {
                         "/servicos", "/servicos/**",
                         "/orcamentos", "/orcamentos/**",
                         "/planejamento", "/planejamento/**",
-                        "/atividades", "/atividades/**"
+                        "/atividades", "/atividades/**",
+                        "/funcionarios", "/funcionarios/**"
+                )
+                .excludePathPatterns(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html"
                 );
     }
 }

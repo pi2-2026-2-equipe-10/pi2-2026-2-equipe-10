@@ -1,0 +1,11 @@
+# Backups gerados automaticamente
+backups/*.sql
+!backups/.gitkeep
+
+# IDE e Sistema Operacional
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+

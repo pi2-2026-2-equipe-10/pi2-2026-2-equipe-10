@@ -1,8 +1,10 @@
 ## Convenções gerais
 
 - **URL base:** `http://localhost:3000`
+- **Documentação Interativa (Swagger / OpenAPI 3):** `http://localhost:3000/swagger-ui.html` (ou `/swagger-ui/index.html`) e especificação JSON em `http://localhost:3000/v3/api-docs`.
 - **Formato:** requisições e respostas em JSON (`Content-Type: application/json`).
 - **Autenticação:** as rotas marcadas como 🔒 exigem o cabeçalho `Authorization: Bearer <token>`, obtido em `POST /login`. O token expira em 12 horas.
+- **Autorização baseada em perfil (RBAC):** a matriz de permissões define dois perfis: `ADMINISTRADOR` e `FUNCIONARIO`. Rotas exclusivas de gestão (como `POST /funcionarios`) retornam `403 Forbidden` quando acessadas por perfis sem autorização.
 - **Formato de erro:** todas as falhas retornam `{ "erro": "mensagem" }`.
 
 | Status | Significado |
@@ -10,8 +12,10 @@
 | 200 | Sucesso |
 | 201 | Registro criado |
 | 400 | Dado obrigatório ausente ou inválido |
-| 401 | Não autenticado, token inválido/expirado, senha incorreta ou funcionário inativo |
+| 401 | Não autenticado, token ausente/inválido/expirado, senha incorreta ou funcionário inativo |
+| 403 | Proibido: perfil do usuário autenticado não possui permissão para esta operação |
 | 404 | Registro não encontrado |
+| 409 | Conflito: valor único já existente no banco (nome de material ou e-mail de cliente) |
 | 500 | Erro interno |
 
 - **Campos numéricos** aceitam número ou texto numérico (`"12.5"`), mas precisam ser **maiores que zero**.
@@ -23,8 +27,8 @@
 | Verbo | Caminho | Auth | Requisito | Descrição |
 |-------|---------|:----:|-----------|-----------|
 | GET | `/funcionarios` | — | RF013 | Lista funcionários ativos para a tela inicial |
-| POST | `/funcionarios` | — | RF012 | Cadastra funcionário |
-| POST | `/login` | — | RF013 | Autentica o funcionário e devolve o token |
+| POST | `/funcionarios` | 🔒 (Admin) | RF012 | Cadastra funcionário (exclusivo para Administrador; retorna 403 para Funcionário) |
+| POST | `/login` | — | RF013 | Autentica o funcionário e devolve o token JWT com perfil |
 | GET | `/materiais` | 🔒 | RF002 | Lista materiais |
 | GET | `/materiais/:id` | 🔒 | RF002 | Consulta um material |
 | POST | `/materiais` | 🔒 | RF001 | Cadastra material |
@@ -57,43 +61,57 @@
 **Retorna (200):**
 ```json
 [
-  { "id": 1, "nome": "Ana" },
-  { "id": 2, "nome": "Carlos" }
+  { "id": 1, "nome": "Ana Beatriz Souza", "perfil": "ADMINISTRADOR" },
+  { "id": 2, "nome": "Carlos Eduardo Lima", "perfil": "FUNCIONARIO" }
 ]
 ```
 
 ---
 
-### POST `/funcionarios`
+### POST `/funcionarios` 🔒
 
-**O que faz:** cadastra um novo funcionário a partir da opção "Adicionar funcionário" da tela inicial. A senha é guardada com hash (bcrypt).
+**O que faz:** cadastra um novo funcionário no sistema (RF012). Conforme a Matriz de Requisitos e a especificação de Perfis de Acesso (`docs/perfis-de-acesso.md`), **apenas usuários com perfil `ADMINISTRADOR` têm permissão para gerenciar funcionários**. A senha é persistida com hash criptográfico seguro (BCrypt).
 
-> Rota pública, porque o RF012 coloca o cadastro na tela inicial, antes do login. Em produção, vale protegê-la.
+**Recebe (cabeçalho):** `Authorization: Bearer <token-de-administrador>`
 
 **Recebe (corpo):**
 
 | Campo | Tipo | Obrigatório | Observação |
 |-------|------|:-----------:|------------|
-| `nome` | string | sim | |
-| `senha` | string | sim | |
+| `nome` | string | sim | Nome completo do funcionário |
+| `senha` | string | sim | Senha de acesso |
+| `perfil` | string | não | `'ADMINISTRADOR'` ou `'FUNCIONARIO'` (padrão: `'FUNCIONARIO'`) |
 | `ativo` | boolean | não | padrão `true` |
 
 ```json
-{ "nome": "Ana", "senha": "123456" }
+{
+  "nome": "Mariana Ribeiro",
+  "senha": "senhaSegura123",
+  "perfil": "FUNCIONARIO",
+  "ativo": true
+}
 ```
 
 **Retorna (201):**
 ```json
-{ "id": 1, "nome": "Ana", "ativo": true }
+{
+  "id": 11,
+  "nome": "Mariana Ribeiro",
+  "perfil": "FUNCIONARIO",
+  "ativo": true
+}
 ```
 
-**Erros:** `400` se `nome` ou `senha` faltarem.
+**Erros:**
+- `400`: se `nome` ou `senha` faltarem, ou se `perfil` for diferente de `ADMINISTRADOR` e `FUNCIONARIO`.
+- `401`: token JWT ausente, inválido ou expirado.
+- `403`: se o token pertencer a um usuário com perfil `FUNCIONARIO` (`{ "erro": "Acesso negado: seu perfil de usuário não tem permissão para gerenciar funcionários." }`).
 
 ---
 
 ### POST `/login`
 
-**O que faz:** autentica o funcionário escolhido na tela inicial e devolve um token JWT (válido por 12h) para usar nas rotas protegidas. Funcionário inativo não consegue entrar.
+**O que faz:** autentica o funcionário escolhido na tela inicial e devolve um token JWT (válido por 12h) contendo `id`, `nome` e `perfil` para uso nas rotas protegidas. Funcionário inativo não consegue entrar.
 
 **Recebe (corpo):**
 
@@ -110,7 +128,11 @@
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
-  "funcionario": { "id": 1, "nome": "Ana" }
+  "funcionario": {
+    "id": 1,
+    "nome": "Ana Beatriz Souza",
+    "perfil": "ADMINISTRADOR"
+  }
 }
 ```
 

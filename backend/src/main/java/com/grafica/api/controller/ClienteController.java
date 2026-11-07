@@ -3,6 +3,10 @@ package com.grafica.api.controller;
 import com.grafica.api.exception.ApiException;
 import com.grafica.api.model.Cliente;
 import com.grafica.api.util.Validacao;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +18,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/clientes")
+@Tag(name = "Clientes", description = "Gestão de cadastro e consulta de clientes (RF003)")
 public class ClienteController {
 
     private final JdbcClient jdbc;
@@ -32,6 +37,8 @@ public class ClienteController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar clientes (RF003)", description = "Retorna todos os clientes cadastrados em ordem alfabética.")
+    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     public List<Cliente> listar() {
         return jdbc.sql("SELECT id, nome, telefone, email, observacoes FROM cliente ORDER BY nome")
                 .query(ClienteController::mapear)
@@ -39,6 +46,12 @@ public class ClienteController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar cliente por ID (RF003)", description = "Retorna os detalhes de um cliente específico.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cliente encontrado"),
+            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "404", description = "Cliente não encontrado")
+    })
     public Cliente buscar(@PathVariable String id) {
         Double idNumerico = Validacao.numeroPositivo(id);
         if (idNumerico == null || idNumerico != Math.floor(idNumerico)) {
@@ -54,6 +67,12 @@ public class ClienteController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Cadastrar cliente (RF003)", description = "Cadastra um novo cliente com nome obrigatório e e-mail único.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Cliente cadastrado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Nome obrigatório ausente"),
+            @ApiResponse(responseCode = "409", description = "E-mail já utilizado por outro cliente")
+    })
     public Cliente cadastrar(@RequestBody(required = false) Map<String, Object> corpo) {
         Object nome = corpo == null ? null : corpo.get("nome");
         Object telefone = corpo == null ? null : corpo.get("telefone");

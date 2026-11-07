@@ -3,6 +3,10 @@ package com.grafica.api.controller;
 import com.grafica.api.exception.ApiException;
 import com.grafica.api.model.Material;
 import com.grafica.api.util.Validacao;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/materiais")
+@Tag(name = "Materiais", description = "Gestão de insumos e matérias-primas utilizadas na produção (RF001 e RF002)")
 public class MaterialController {
 
     private static final BigDecimal CUSTO_MAXIMO = new BigDecimal("9999999999.99");
@@ -36,6 +41,8 @@ public class MaterialController {
 
     // GET /materiais
     @GetMapping
+    @Operation(summary = "Listar materiais (RF002)", description = "Retorna todos os materiais cadastrados em ordem alfabética.")
+    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     public List<Material> listar() {
         return jdbc.sql("SELECT id, nome, unidade_medida, custo FROM material ORDER BY nome")
                 .query(MaterialController::mapear)
@@ -44,6 +51,12 @@ public class MaterialController {
 
     // GET /materiais/{id}
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar material por ID (RF002)", description = "Retorna os detalhes de um material específico.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Material encontrado"),
+            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "404", description = "Material não encontrado")
+    })
     public Material buscar(@PathVariable String id) {
         Double idNumerico = Validacao.numeroPositivo(id);
         if (idNumerico == null || idNumerico != Math.floor(idNumerico)) {
@@ -60,6 +73,12 @@ public class MaterialController {
     // POST /materiais
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Cadastrar material (RF001)", description = "Cadastra um novo material com nome único, unidade de medida e custo positivo.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Material criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados ausentes ou inválidos"),
+            @ApiResponse(responseCode = "409", description = "Material com o mesmo nome já cadastrado")
+    })
     public Material cadastrar(@RequestBody(required = false) Map<String, Object> corpo) {
         Object nome = corpo == null ? null : corpo.get("nome");
         Object unidade = corpo == null ? null : corpo.get("unidadeMedida");
@@ -99,6 +118,13 @@ public class MaterialController {
 
     // PUT /materiais/{id}
     @PutMapping("/{id}")
+    @Operation(summary = "Editar material (RF002)", description = "Atualiza os dados de um material existente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Material atualizado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados ausentes ou inválidos"),
+            @ApiResponse(responseCode = "404", description = "Material não encontrado"),
+            @ApiResponse(responseCode = "409", description = "Nome já utilizado por outro material")
+    })
     public Material atualizar(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
         Double idNumerico = Validacao.numeroPositivo(id);
         if (idNumerico == null || idNumerico != Math.floor(idNumerico)) {

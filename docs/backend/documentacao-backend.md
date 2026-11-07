@@ -58,22 +58,70 @@ docker exec grafica_db psql -U grafica_user -d grafica -v ON_ERROR_STOP=1 -f /tm
 
 O mapeamento dos índices por filtro e a forma de comprová-los com `EXPLAIN` estão em [`indices.md`](indices.md).
 
-## 4. As 8 rotas implementadas
+## 4. Rotas Implementadas e Requisitos Essenciais Restantes (Backend 2)
 
-Rotas protegidas exigem `Authorization: Bearer <token>` (token JWT obtido em `POST /login`, válido por 12 horas). Os exemplos de cada rota, com sucesso e erro, estão em `backend/requests.http`.
+As rotas protegidas exigem o cabeçalho `Authorization: Bearer <token>` (token JWT emitido em `POST /login`, válido por 12 horas).
 
-| # | Método | Rota | Requisito | Auth | Sucesso | Erros |
+Com a entrega de **Backend 2**, foram consolidados os requisitos **Essenciais** restantes da especificação (`docs/requisitos-funcionais.md`):
+
+| # | Método | Rota | Requisito | Auth / Perfil | Sucesso | Erros |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | `GET` | `/funcionarios` | RF-13 | não | 200 | — |
-| 2 | `POST` | `/login` | RF-13 | não | 200 | 400, 401 |
-| 3 | `GET` | `/materiais` | RF-02 | sim | 200 | 401 |
-| 4 | `POST` | `/materiais` | RF-01 | sim | 201 | 400, 401, 409 |
-| 5 | `POST` | `/servicos` | RF-04 | sim | 201 | 400, 401, 404 |
-| 6 | `PUT` | `/servicos/:id/composicao` | RF-05 | sim | 200 | 400, 401, 404 |
-| 7 | `POST` | `/orcamentos/calcular` | RF-06, RF-07 | sim | 200 | 400, 401, 404 |
-| 8 | `POST` | `/orcamentos` | RF-08 | sim | 201 | 400, 401, 404 |
+| 1 | `GET` | `/funcionarios` | RF-13 | Pública | 200 | — |
+| 2 | `POST` | `/login` | RF-13 | Pública | 200 | 400, 401 |
+| 3 | `POST` | `/funcionarios` | RF-12 | 🔒 **Exclusivo Administrador** | 201 | 400, 401, 403 |
+| 4 | `GET` | `/materiais` | RF-02 | 🔒 Autenticado | 200 | 401 |
+| 5 | `GET` | `/materiais/:id` | RF-02 | 🔒 Autenticado | 200 | 400, 401, 404 |
+| 6 | `POST` | `/materiais` | RF-01 | 🔒 Autenticado | 201 | 400, 401, 409 |
+| 7 | `PUT` | `/materiais/:id` | RF-02 | 🔒 Autenticado | 200 | 400, 401, 404, 409 |
+| 8 | `GET` | `/servicos` | RF-04 | 🔒 Autenticado | 200 | 401 |
+| 9 | `GET` | `/servicos/:id` | RF-04, RF-05 | 🔒 Autenticado | 200 | 400, 401, 404 |
+| 10 | `POST` | `/servicos` | RF-04 | 🔒 Autenticado | 201 | 400, 401, 404 |
+| 11 | `PUT` | `/servicos/:id/composicao` | RF-05 | 🔒 Autenticado | 200 | 400, 401, 404 |
+| 12 | `POST` | `/orcamentos/calcular` | RF-06, RF-07 | 🔒 Autenticado | 200 | 400, 401, 404 |
+| 13 | `GET` | `/orcamentos` | RF-09 | 🔒 Autenticado | 200 | 401 |
+| 14 | `GET` | `/orcamentos/:id` | RF-09 | 🔒 Autenticado | 200 | 400, 401, 404 |
+| 15 | `POST` | `/orcamentos` | RF-08 | 🔒 Autenticado | 201 | 400, 401, 404 |
+| 16 | `PUT` | `/orcamentos/:id` | RF-09 | 🔒 Autenticado | 200 | 400, 401, 404 |
 
-## 5. Regras de negócio: onde estão no código
+---
+
+## 5. Documentação Interativa com Swagger / OpenAPI (Backend 2)
+
+A API conta com a especificação OpenAPI 3.0 e interface interativa Swagger UI através da dependência `springdoc-openapi-starter-webmvc-ui`:
+
+- **Swagger UI (navegador):** [http://localhost:3000/swagger-ui.html](http://localhost:3000/swagger-ui.html)
+- **OpenAPI JSON:** [http://localhost:3000/v3/api-docs](http://localhost:3000/v3/api-docs)
+- **Autenticação no Swagger:** O botão **Authorize** permite inserir o token JWT com o prefixo `Bearer <token>`, habilitando a testagem direta de todas as rotas protegidas.
+
+---
+
+## 6. Autorização por Perfil e Código 403 Forbidden (Backend 3)
+
+Conforme a Matriz de Permissões definida em [`docs/perfis-de-acesso.md`](../perfis-de-acesso.md), o sistema adota dois perfis de usuário:
+
+- **ADMINISTRADOR:** Acesso irrestrito a todas as operações operacionais e de gestão de funcionários (`POST /funcionarios`).
+- **FUNCIONARIO:** Acesso operacional completo (materiais, clientes, serviços, composições, cálculos, orçamentos e planejamento), mas **sem permissão para gerenciar funcionários**.
+
+### Implementação do Controle RBAC:
+1. **Banco de Dados:** A tabela `funcionario` armazena a coluna `perfil VARCHAR(20) NOT NULL CHECK (perfil IN ('ADMINISTRADOR', 'FUNCIONARIO'))`.
+2. **Token JWT:** Ao autenticar em `POST /login`, a claim `perfil` é assinada criptograficamente no payload do token.
+3. **Interceptor (`AuthInterceptor.java`):** Ao receber requisições de alteração/cadastro em `/funcionarios`, verifica se o perfil do usuário logado é `ADMINISTRADOR`. Caso seja `FUNCIONARIO`, rejeita imediatamente com **HTTP 403 Forbidden**:
+   ```json
+   { "erro": "Acesso negado: seu perfil de usuário não tem permissão para gerenciar funcionários." }
+   ```
+
+---
+
+## 7. Cópia de Segurança e Restauração do Banco de Dados (Backend 3)
+
+A rotina de backup lógico consistente e restauração automatizada está documentada e homologada em [`docs/backend/backup-e-restauracao.md`](backup-e-restauracao.md), incluindo scripts multiplataforma:
+- **Backup:** `scripts/backup-banco.sh` (Linux/macOS) e `scripts/backup-banco.ps1` (Windows).
+- **Restauração:** `scripts/restaurar-banco.sh` (Linux/macOS) e `scripts/restaurar-banco.ps1` (Windows).
+- **Evidência de Teste:** O procedimento foi executado em ambiente real, comprovando a reversão de dados transitórios e restauração de 100% dos registros.
+
+---
+
+## 8. Regras de negócio: onde estão no código
 
 | RN | Regra | Onde é aplicada | Resposta quando violada | Teste |
 | :--- | :--- | :--- | :--- | :--- |

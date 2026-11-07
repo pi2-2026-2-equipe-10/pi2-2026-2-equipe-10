@@ -3,6 +3,10 @@ package com.grafica.api.controller;
 import com.grafica.api.exception.ApiException;
 import com.grafica.api.model.Atividade;
 import com.grafica.api.util.Validacao;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +19,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 
 @RestController
+@Tag(name = "Planejamento e Atividades", description = "Agenda semanal de produção e tarefas de confecção (RF010 e RF011)")
 public class PlanejamentoController {
 
     private final JdbcClient jdbc;
@@ -25,8 +30,10 @@ public class PlanejamentoController {
 
     public record DiaPlanejamento(String dia, List<Atividade> atividades) {}
 
-    // GET /planejamento?inicio=AAAA-MM-DD
+    // GET /planejamento?inicio=AAAA-MM-DD (RF010)
     @GetMapping("/planejamento")
+    @Operation(summary = "Visualizar planejamento semanal (RF010)", description = "Retorna a grade semanal de produção (7 dias, segunda a domingo) agrupada por dia.")
+    @ApiResponse(responseCode = "200", description = "Grade semanal retornada com sucesso")
     public List<DiaPlanejamento> obterSemana(@RequestParam(required = false) String inicio) {
         LocalDate dataBase;
         if (inicio != null && !inicio.isBlank()) {
@@ -78,9 +85,14 @@ public class PlanejamentoController {
         return resposta;
     }
 
-    // POST /atividades
+    // POST /atividades (RF011)
     @PostMapping("/atividades")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Registrar atividade na agenda (RF011)", description = "Agenda um serviço ou atividade em uma data específica da produção.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Atividade registrada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Título ou data inválidos")
+    })
     public Atividade criarAtividade(@RequestBody(required = false) Map<String, Object> corpo) {
         Object tituloObj = corpo == null ? null : corpo.get("titulo");
         Object dataObj = corpo == null ? null : corpo.get("data");
@@ -120,8 +132,14 @@ public class PlanejamentoController {
         return new Atividade(novoId, titulo, descricao, dataParsed.toString());
     }
 
-    // PUT /atividades/{id}
+    // PUT /atividades/{id} (RF011)
     @PutMapping("/atividades/{id}")
+    @Operation(summary = "Editar atividade do planejamento (RF011)", description = "Atualiza título, descrição ou data de uma atividade da semana.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Atividade atualizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "404", description = "Atividade não encontrada")
+    })
     public Atividade atualizarAtividade(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
         Double idNum = Validacao.numeroPositivo(id);
         if (idNum == null || idNum != Math.floor(idNum)) {
