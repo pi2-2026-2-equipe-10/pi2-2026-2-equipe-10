@@ -3,6 +3,10 @@ package com.grafica.api.controller;
 import com.grafica.api.exception.ApiException;
 import com.grafica.api.model.*;
 import com.grafica.api.util.Validacao;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/orcamentos")
+@Tag(name = "Orçamentos e Cálculos", description = "Cálculo matemático de custos e gestão de propostas (RF006, RF007, RF008, RF009)")
 public class OrcamentoController {
 
     private final JdbcClient jdbc;
@@ -28,7 +33,6 @@ public class OrcamentoController {
 
     public record CustoCalculado(double custo) {}
 
-    // Dados do orçamento já lidos, validados e prontos para gravar (usado por POST e PUT)
     private record DadosOrcamento(
             Integer clienteId,
             Integer servicoId,
@@ -37,10 +41,14 @@ public class OrcamentoController {
             BigDecimal custoTotal,
             boolean rascunho) {}
 
-    // POST /orcamentos/calcular
-    // RN-01: serviço por composição exige composição cadastrada.
-    // RN-03: serviço por metragem = largura x altura x custo do material.
+    // POST /orcamentos/calcular (RF006, RF007, RN-01, RN-03)
     @PostMapping("/calcular")
+    @Operation(summary = "Calcular custo prévio (RF006/RF007)", description = "Executa o cálculo matemático de custo sem persistir, para conferência antes de emitir a proposta.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cálculo efetuado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dimensões ausentes ou serviço sem composição"),
+            @ApiResponse(responseCode = "404", description = "Serviço não encontrado")
+    })
     public CustoCalculado calcular(@RequestBody(required = false) Map<String, Object> corpo) {
         Object servicoIdObj = corpo == null ? null : corpo.get("servicoId");
         Double servicoIdNum = Validacao.numeroPositivo(servicoIdObj);
@@ -65,7 +73,6 @@ public class OrcamentoController {
             BigDecimal custoFinal = BigDecimal.valueOf(custo).setScale(2, RoundingMode.HALF_UP);
             return new CustoCalculado(custoFinal.doubleValue());
         } else {
-            // COMPOSICAO
             List<ItemComposicao> itens = servico.itens();
             if (itens == null || itens.isEmpty()) {
                 throw new ApiException(400, "O serviço configurado para cálculo por composição não possui composição cadastrada.");
@@ -132,8 +139,10 @@ public class OrcamentoController {
                 s);
     }
 
-    // GET /orcamentos
+    // GET /orcamentos (RF009)
     @GetMapping
+    @Operation(summary = "Listar orçamentos (RF009)", description = "Retorna todos os orçamentos com cruzamento de dados de cliente e serviço em ordem decrescente de criação.")
+    @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     public List<Orcamento> listar() {
         return jdbc.sql("""
                 SELECT o.id, o.cliente_id, o.servico_id, o.largura, o.altura, o.custo_total, o.rascunho, o.criado_em,
@@ -149,8 +158,14 @@ public class OrcamentoController {
                 .list();
     }
 
-    // GET /orcamentos/{id}
+    // GET /orcamentos/{id} (RF009)
     @GetMapping("/{id}")
+    @Operation(summary = "Consultar orçamento por ID (RF009)", description = "Retorna os detalhes completos de um orçamento.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Orçamento encontrado"),
+            @ApiResponse(responseCode = "400", description = "ID inválido"),
+            @ApiResponse(responseCode = "404", description = "Orçamento não encontrado")
+    })
     public Orcamento buscar(@PathVariable String id) {
         Double idNum = Validacao.numeroPositivo(id);
         if (idNum == null || idNum != Math.floor(idNum)) {
@@ -177,8 +192,6 @@ public class OrcamentoController {
         return valor == null || (valor instanceof String s && s.isBlank());
     }
 
-    // Id opcional: ausente, texto vazio ou 0 significam "não informado".
-    // Qualquer outro valor precisa ser um inteiro positivo, senão 400.
     private static Integer idOpcional(Object valor, String campo) {
         if (vazio(valor)) return null;
         Double n = Validacao.numero(valor);
@@ -188,9 +201,6 @@ public class OrcamentoController {
         return n == 0 ? null : n.intValue();
     }
 
-    // Dimensão opcional: ausente, vazia ou 0 significam "não informada" (o cálculo por
-    // metragem exige valor positivo e rejeita por conta própria). Texto não numérico ou
-    // valor negativo geram 400.
     private static BigDecimal dimensaoOpcional(Object valor, String campo) {
         if (vazio(valor)) return null;
         Double n = Validacao.numero(valor);
@@ -204,7 +214,6 @@ public class OrcamentoController {
         return BigDecimal.valueOf(n).setScale(2, RoundingMode.HALF_UP);
     }
 
-    // Lê e valida o corpo de POST e PUT (as regras são as mesmas nos dois)
     private DadosOrcamento lerDados(Map<String, Object> corpo) {
         boolean rascunho = corpo != null && Boolean.TRUE.equals(corpo.get("rascunho"));
 
@@ -213,7 +222,6 @@ public class OrcamentoController {
         BigDecimal largura = dimensaoOpcional(corpo == null ? null : corpo.get("largura"), "largura");
         BigDecimal altura = dimensaoOpcional(corpo == null ? null : corpo.get("altura"), "altura");
 
-        // RN-04: o cliente é opcional, mas, se informado, precisa existir
         if (clienteId != null) {
             boolean existe = jdbc.sql("SELECT COUNT(*) FROM cliente WHERE id = :id")
                     .param("id", clienteId)
@@ -246,9 +254,15 @@ public class OrcamentoController {
         return new DadosOrcamento(clienteId, servicoId, largura, altura, custoTotal, rascunho);
     }
 
-    // POST /orcamentos
+    // POST /orcamentos (RF008)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Criar orçamento ou rascunho (RF008)", description = "Registra um novo orçamento com cálculo automático consolidado ou salva como rascunho.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Orçamento registrado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados ausentes ou inválidos"),
+            @ApiResponse(responseCode = "404", description = "Cliente ou serviço não encontrado")
+    })
     public Orcamento criar(@RequestBody(required = false) Map<String, Object> corpo) {
         DadosOrcamento d = lerDados(corpo);
 
@@ -269,8 +283,14 @@ public class OrcamentoController {
         return buscar(String.valueOf(novoId));
     }
 
-    // PUT /orcamentos/{id}
+    // PUT /orcamentos/{id} (RF009)
     @PutMapping("/{id}")
+    @Operation(summary = "Editar orçamento ou finalizar rascunho (RF009)", description = "Atualiza os dados de um orçamento e recalcula o custo total.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Orçamento atualizado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "404", description = "Orçamento, cliente ou serviço não encontrado")
+    })
     public Orcamento atualizar(@PathVariable String id, @RequestBody(required = false) Map<String, Object> corpo) {
         Orcamento existente = buscar(id);
         DadosOrcamento d = lerDados(corpo);

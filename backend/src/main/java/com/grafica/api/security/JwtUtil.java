@@ -17,15 +17,20 @@ public final class JwtUtil {
     private static final SecretKey CHAVE = Keys.hmacShaKeyFor(SEGREDO.getBytes(StandardCharsets.UTF_8));
     private static final long DOZE_HORAS = 12L * 60 * 60 * 1000;
 
-    public static String gerar(int id, String nome) {
+    public static String gerar(int id, String nome, String perfil) {
         Date agora = new Date();
         return Jwts.builder()
                 .claim("id", id)
                 .claim("nome", nome)
+                .claim("perfil", perfil != null ? perfil : "FUNCIONARIO")
                 .issuedAt(agora)
                 .expiration(new Date(agora.getTime() + DOZE_HORAS))
                 .signWith(CHAVE)
                 .compact();
+    }
+
+    public static String gerar(int id, String nome) {
+        return gerar(id, nome, "FUNCIONARIO");
     }
 
     public static Claims validar(String token) {

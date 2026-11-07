@@ -12,12 +12,14 @@ CREATE TYPE tipo_calculo_enum AS ENUM ('METRAGEM', 'COMPOSICAO');
 -- ---------------------------------------------------------------------
 -- Funcionario
 -- Pessoa que entra no sistema. Não se relaciona com outras entidades.
+-- Perfil define os níveis de acesso: ADMINISTRADOR ou FUNCIONARIO.
 -- ---------------------------------------------------------------------
 CREATE TABLE funcionario (
     id          SERIAL PRIMARY KEY,
     nome        VARCHAR(150) NOT NULL,
     senha_hash  VARCHAR(255) NOT NULL,
-    ativo       BOOLEAN NOT NULL DEFAULT TRUE
+    ativo       BOOLEAN NOT NULL DEFAULT TRUE,
+    perfil      VARCHAR(20) NOT NULL DEFAULT 'FUNCIONARIO' CHECK (perfil IN ('ADMINISTRADOR', 'FUNCIONARIO'))
 );
 
 -- Índice parcial: só funcionários ativos, já ordenados por nome.

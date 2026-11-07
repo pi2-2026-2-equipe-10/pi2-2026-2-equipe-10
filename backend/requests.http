@@ -1,5 +1,7 @@
 @url = http://localhost:3000
 @token = {{login.response.body.token}}
+@tokenAdmin = {{loginAdmin.response.body.token}}
+@tokenFuncionario = {{loginFuncionario.response.body.token}}
 
 # Banco recém-criado (docker compose down -v / up). IDs usados vêm do seed:
 # materiais 1-10, serviços 1-5 (METRAGEM) e 6-10 (COMPOSICAO), clientes 1-10.
@@ -7,18 +9,36 @@
 # Cada bloco informa o status esperado.
 
 ############################################################
+# DOCUMENTAÇÃO SWAGGER / OPENAPI (BACKEND 2)
+############################################################
+
+### S01 - Swagger UI interativo (200)
+GET {{url}}/swagger-ui/index.html
+
+### S02 - Especificação OpenAPI JSON (200)
+GET {{url}}/v3/api-docs
+
+############################################################
 # FUNCIONÁRIOS E LOGIN (RN-05)
 ############################################################
 
-### 01 - Lista de funcionários ativos (200)
+### 01 - Lista de funcionários ativos com perfil (200)
 GET {{url}}/funcionarios
 
-### 02 - Login válido (200) - RODE ANTES DAS ROTAS PROTEGIDAS
+### 02 - Login válido como Administrador (200) - RODE ANTES DAS ROTAS PROTEGIDAS
 # @name login
+# @name loginAdmin
 POST {{url}}/login
 Content-Type: application/json
 
 { "funcionarioId": 1, "senha": "123456" }
+
+### 02B - Login válido como Funcionário (200)
+# @name loginFuncionario
+POST {{url}}/login
+Content-Type: application/json
+
+{ "funcionarioId": 2, "senha": "123456" }
 
 ### 03 - Senha incorreta (401)
 POST {{url}}/login
@@ -37,6 +57,35 @@ POST {{url}}/login
 Content-Type: application/json
 
 { "funcionarioId": 99999, "senha": "123456" }
+
+############################################################
+# AUTORIZAÇÃO POR PERFIL (BACKEND 3 - RBAC / 403 FORBIDDEN)
+############################################################
+
+### 05A - Cadastrar funcionário sem token (401)
+POST {{url}}/funcionarios
+Content-Type: application/json
+
+{ "nome": "Novo Usuario Sem Token", "senha": "123" }
+
+### 05B - Cadastrar funcionário com perfil FUNCIONARIO (403 Forbidden)
+POST {{url}}/funcionarios
+Authorization: Bearer {{tokenFuncionario}}
+Content-Type: application/json
+
+{ "nome": "Funcionario Nao Autorizado", "senha": "123" }
+
+### 05C - Cadastrar funcionário com perfil ADMINISTRADOR (201 Created)
+POST {{url}}/funcionarios
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{
+  "nome": "Novo Colaborador Admin {{$randomInt 100 999}}",
+  "senha": "senhaSegura123",
+  "perfil": "FUNCIONARIO",
+  "ativo": true
+}
 
 ############################################################
 # AUTENTICAÇÃO DAS ROTAS PROTEGIDAS (RN-05)

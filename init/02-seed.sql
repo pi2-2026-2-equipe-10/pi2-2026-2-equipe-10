@@ -9,18 +9,19 @@
 
 -- ---------------------------------------------------------------------
 -- Funcionario (10)
+-- Ana Beatriz Souza é ADMINISTRADOR; demais são FUNCIONARIO.
 -- ---------------------------------------------------------------------
-INSERT INTO funcionario (nome, senha_hash, ativo) VALUES
-('Ana Beatriz Souza',   '$2b$10$abcdefghijklmnopqrstuv01', TRUE),
-('Carlos Eduardo Lima', '$2b$10$abcdefghijklmnopqrstuv02', TRUE),
-('Fernanda Costa',      '$2b$10$abcdefghijklmnopqrstuv03', TRUE),
-('Gustavo Ribeiro',     '$2b$10$abcdefghijklmnopqrstuv04', TRUE),
-('Juliana Martins',     '$2b$10$abcdefghijklmnopqrstuv05', TRUE),
-('Marcelo Andrade',     '$2b$10$abcdefghijklmnopqrstuv06', TRUE),
-('Patrícia Nunes',      '$2b$10$abcdefghijklmnopqrstuv07', FALSE),
-('Rafael Teixeira',     '$2b$10$abcdefghijklmnopqrstuv08', TRUE),
-('Simone Araújo',       '$2b$10$abcdefghijklmnopqrstuv09', FALSE),
-('Thiago Monteiro',     '$2b$10$abcdefghijklmnopqrstuv10', TRUE);
+INSERT INTO funcionario (nome, senha_hash, ativo, perfil) VALUES
+('Ana Beatriz Souza',   '$2b$10$abcdefghijklmnopqrstuv01', TRUE,  'ADMINISTRADOR'),
+('Carlos Eduardo Lima', '$2b$10$abcdefghijklmnopqrstuv02', TRUE,  'FUNCIONARIO'),
+('Fernanda Costa',      '$2b$10$abcdefghijklmnopqrstuv03', TRUE,  'FUNCIONARIO'),
+('Gustavo Ribeiro',     '$2b$10$abcdefghijklmnopqrstuv04', TRUE,  'FUNCIONARIO'),
+('Juliana Martins',     '$2b$10$abcdefghijklmnopqrstuv05', TRUE,  'FUNCIONARIO'),
+('Marcelo Andrade',     '$2b$10$abcdefghijklmnopqrstuv06', TRUE,  'FUNCIONARIO'),
+('Patrícia Nunes',      '$2b$10$abcdefghijklmnopqrstuv07', FALSE, 'FUNCIONARIO'),
+('Rafael Teixeira',     '$2b$10$abcdefghijklmnopqrstuv08', TRUE,  'FUNCIONARIO'),
+('Simone Araújo',       '$2b$10$abcdefghijklmnopqrstuv09', FALSE, 'FUNCIONARIO'),
+('Thiago Monteiro',     '$2b$10$abcdefghijklmnopqrstuv10', TRUE,  'FUNCIONARIO');
 
 -- ---------------------------------------------------------------------
 -- Cliente (10)
