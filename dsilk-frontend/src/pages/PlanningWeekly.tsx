@@ -145,60 +145,65 @@ export const PlanningWeekly: React.FC = () => {
 
   return (
     <DashboardLayout activeMenu="Planejamento">
-      {/* Cabeçalho da Tela */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* Cabeçalho da Tela estilo Figma */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Planejamento Semanal</h2>
-          <p className="auth-description" style={{ textAlign: 'left' }}>
-            Acompanhe a fila de produção e atividades agendadas da semana
+          <div className="category-breadcrumb">PRODUÇÃO</div>
+          <h1 className="page-main-title">Planejamento Semanal</h1>
+          <p className="page-main-subtitle">
+            Acompanhe a fila de produção e atividades agendadas da semana.
           </p>
         </div>
 
         {/* Controles de Navegação de Semana */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', padding: '0.5rem 0.75rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
+            style={{ padding: '0.5rem 0.75rem' }} 
             onClick={() => navegarSemana(-7)}
             title="Semana anterior"
           >
-            <ChevronLeft size={18} />
-          </Button>
+            <ChevronLeft size={16} />
+          </button>
 
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', fontSize: '0.85rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
+            style={{ fontSize: '0.85rem' }} 
             onClick={irParaHoje}
           >
             Hoje
-          </Button>
+          </button>
 
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', padding: '0.5rem 0.75rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
+            style={{ padding: '0.5rem 0.75rem' }} 
             onClick={() => navegarSemana(7)}
             title="Próxima semana"
           >
-            <ChevronRight size={18} />
-          </Button>
+            <ChevronRight size={16} />
+          </button>
 
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
+            style={{ padding: '0.55rem' }} 
             onClick={() => carregarSemana(dataInicio)}
             disabled={loading}
+            title="Atualizar"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </Button>
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          </button>
 
-          <Button 
-            variant="primary" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          <button 
+            type="button"
+            className="btn-dark" 
             onClick={() => abrirModalCriar()}
           >
-            <Plus size={16} />
-            Nova Atividade
-          </Button>
+            + Nova Atividade
+          </button>
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import { DashboardLayout } from '../components/DashboardLayout';
 import { Button } from '../components/Button';
 import { orcamentoService, Orcamento } from '../services/orcamentoService';
 import { getApiErrorMessage } from '../types/api';
-import { RefreshCw, Plus, AlertCircle, Calculator } from 'lucide-react';
+import { RefreshCw, AlertCircle, Calculator } from 'lucide-react';
 
 export const BudgetsList: React.FC = () => {
   const navigate = useNavigate();
@@ -41,31 +41,31 @@ export const BudgetsList: React.FC = () => {
 
   return (
     <DashboardLayout activeMenu="Orçamentos">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.75rem' }}>
         <div>
-          <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '0.25rem' }}>Orçamentos & Propostas</h2>
-          <p className="auth-description" style={{ textAlign: 'left' }}>
-            Consulte orçamentos gerados, finalize rascunhos e emita novas propostas
+          <div className="category-breadcrumb">PROPOSTAS</div>
+          <h1 className="page-main-title">Orçamentos</h1>
+          <p className="page-main-subtitle">
+            Consulte orçamentos gerados, finalize rascunhos e emita novas propostas.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Button 
-            variant="outline" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          <button 
+            type="button"
+            className="btn-outline-figma" 
             onClick={carregarOrcamentos}
             disabled={loading}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             Atualizar
-          </Button>
-          <Button 
-            variant="primary" 
-            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }} 
+          </button>
+          <button 
+            type="button"
+            className="btn-dark" 
             onClick={() => navigate('/budgets/new')}
           >
-            <Plus size={16} />
-            Novo Orçamento
-          </Button>
+            + Novo Orçamento
+          </button>
         </div>
       </div>
 

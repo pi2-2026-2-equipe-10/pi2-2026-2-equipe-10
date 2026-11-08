@@ -12,6 +12,8 @@ import { BudgetsList } from './pages/BudgetsList';
 import { BudgetCalculator } from './pages/BudgetCalculator';
 import { PlanningWeekly } from './pages/PlanningWeekly';
 import { ClientsList } from './pages/ClientsList';
+import { Overview } from './pages/Overview';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 import './styles/dashboard.css';
 
@@ -19,7 +21,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth Routes */}
+        {/* Auth Routes (Públicas) */}
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -27,24 +29,98 @@ function App() {
         <Route path="/send-code" element={<SendCode />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* Rotas Protegidas (Exigem autenticação via ProtectedRoute) */}
+        <Route
+          path="/overview"
+          element={
+            <ProtectedRoute>
+              <Overview />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/dashboard" element={<Navigate to="/overview" replace />} />
+
         {/* Materials Management Routes */}
-        <Route path="/materials" element={<MaterialsList />} />
-        <Route path="/materials/new" element={<MaterialsRegistration />} />
-        <Route path="/materials/edit/:id" element={<MaterialsRegistration />} />
+        <Route
+          path="/materials"
+          element={
+            <ProtectedRoute>
+              <MaterialsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/materials/new"
+          element={
+            <ProtectedRoute>
+              <MaterialsRegistration />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/materials/edit/:id"
+          element={
+            <ProtectedRoute>
+              <MaterialsRegistration />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Services & Composition Routes (Issue #56) */}
-        <Route path="/services" element={<ServicesList />} />
-        <Route path="/services/new" element={<ServicesRegistration />} />
+        {/* Services & Composition Routes */}
+        <Route
+          path="/services"
+          element={
+            <ProtectedRoute>
+              <ServicesList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/services/new"
+          element={
+            <ProtectedRoute>
+              <ServicesRegistration />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Budgets Routes (Issue #56) */}
-        <Route path="/budgets" element={<BudgetsList />} />
-        <Route path="/budgets/new" element={<BudgetCalculator />} />
+        {/* Budgets Routes */}
+        <Route
+          path="/budgets"
+          element={
+            <ProtectedRoute>
+              <BudgetsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budgets/new"
+          element={
+            <ProtectedRoute>
+              <BudgetCalculator />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Planning Routes (Issue #56) */}
-        <Route path="/planning" element={<PlanningWeekly />} />
+        {/* Planning Routes */}
+        <Route
+          path="/planning"
+          element={
+            <ProtectedRoute>
+              <PlanningWeekly />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Clients Module */}
-        <Route path="/clients" element={<ClientsList />} />
+        <Route
+          path="/clients"
+          element={
+            <ProtectedRoute>
+              <ClientsList />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

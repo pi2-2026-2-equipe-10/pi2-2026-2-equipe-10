@@ -39,7 +39,7 @@ api.interceptors.request.use(
 /**
  * Interceptor de Resposta:
  * Trata respostas de erro padronizadas do backend ({ "erro": "mensagem" })
- * e redireciona automaticamente para login ao receber 401 (não autorizado/token expirado)
+ * com mensagens escritas pelo Design para sessão expirada (401) e permissão negada (403)
  */
 api.interceptors.response.use(
   (response) => {
@@ -47,20 +47,36 @@ api.interceptors.response.use(
   },
   (error: AxiosError<ApiErrorResponse>) => {
     const status = error.response?.status;
+    const message = getApiErrorMessage(error);
 
-    // Sessão expirada ou não autorizada (401)
+    // 401: Sessão expirada ou não autenticado
     if (status === 401) {
       clearSession();
+      try {
+        sessionStorage.setItem('@dsilk:session_message', message);
+      } catch {
+        // Ignora erros de storage
+      }
 
-      // Redireciona para o login apenas se não estiver já em uma rota pública/autenticação
       const publicPaths = ['/', '/login', '/register', '/forgot-password', '/send-code', '/reset-password'];
       if (!publicPaths.includes(window.location.pathname)) {
-        window.location.href = '/';
+        window.location.href = '/login?expired=1';
       }
     }
 
-    // Registra e formata a mensagem amigável no objeto de erro
-    const message = getApiErrorMessage(error);
+    // 403: Acesso negado pelo controle de perfil (RBAC)
+    if (status === 403) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('dsilk:forbidden', {
+            detail: { message },
+          })
+        );
+      } catch {
+        // Ignora erros de evento
+      }
+    }
+
     if (error.response?.data) {
       error.message = message;
     }
