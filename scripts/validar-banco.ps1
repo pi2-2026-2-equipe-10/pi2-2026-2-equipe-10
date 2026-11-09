@@ -52,7 +52,7 @@ Compose up -d db *> $null
 EsperarBanco
 
 $tabelas = Sql "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
-Checar "schema criado pelos scripts de init (7 tabelas)" ($tabelas -eq "7")
+Checar "schema criado pelos scripts de init (8 tabelas, com perfil)" ($tabelas -eq "8")
 
 $seed = Sql "SELECT concat_ws(',', (SELECT count(*) FROM funcionario), (SELECT count(*) FROM cliente), (SELECT count(*) FROM material), (SELECT count(*) FROM servico), (SELECT count(*) FROM item_composicao), (SELECT count(*) FROM orcamento), (SELECT count(*) FROM atividade))"
 Checar "seed carregado (10 registros em cada tabela)" ($seed -eq "10,10,10,10,10,10,10")
@@ -62,6 +62,16 @@ Checar "restricoes UNIQUE existem (material.nome e cliente.email)" ($unique -eq 
 
 $custo = Sql "SELECT custo_total FROM orcamento WHERE id = 1"
 Checar "script 04 recalculou o custo do orcamento 1 (54.00)" ($custo -eq "54.00")
+
+# Aspas simples no PowerShell: o texto "$2" do hash BCrypt nao deve ser interpretado como variavel
+$perfis = Sql 'SELECT concat_ws('','', (SELECT count(*) FROM perfil), (SELECT count(*) FROM funcionario f JOIN perfil p ON p.codigo = f.perfil WHERE p.codigo = ''ADMINISTRADOR''), (SELECT count(*) FROM funcionario f JOIN perfil p ON p.codigo = f.perfil WHERE p.codigo = ''FUNCIONARIO''))'
+Checar "migracao 06 e seed 07: 2 perfis, 1 administrador e 9 funcionarios" ($perfis -eq "2,1,9")
+
+$semHash = Sql 'SELECT count(*) FROM funcionario WHERE senha_hash NOT LIKE ''$2%'''
+Checar "nenhuma senha fora do formato de hash BCrypt" ($semHash -eq "0")
+
+$trava = Sql 'SELECT count(*) FROM pg_constraint WHERE conname = ''funcionario_senha_hash_bcrypt_chk'''
+Checar "banco recusa senha em texto puro (constraint de hash existe)" ($trava -eq "1")
 
 # ---------------------------------------------------------------
 Write-Host ""
