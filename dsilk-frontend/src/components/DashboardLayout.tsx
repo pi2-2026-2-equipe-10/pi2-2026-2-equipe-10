@@ -279,9 +279,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#0F172A' }}>
                   Novo Colaborador
                 </h3>
-                <p style={{ fontSize: '0.825rem', color: '#64748B', margin: '0.2rem 0 0 0' }}>
-                  Apenas administradores podem cadastrar novos funcionários.
-                </p>
               </div>
               <button
                 type="button"

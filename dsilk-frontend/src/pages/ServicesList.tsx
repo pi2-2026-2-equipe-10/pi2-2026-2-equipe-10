@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { servicoService, Servico, ItemComposicao } from '../services/servicoService';
 import { materialService, Material } from '../services/materialService';
@@ -27,6 +27,17 @@ export const ServicesList: React.FC = () => {
   const [novoMaterialId, setNovoMaterialId] = useState<number | ''>('');
   const [salvandoNovo, setSalvandoNovo] = useState(false);
   const [erroNovo, setErroNovo] = useState<string | null>(null);
+
+  const formNovoRef = useRef<HTMLDivElement>(null);
+  const inputNomeRef = useRef<HTMLInputElement>(null);
+
+  const handleNovoServicoClick = () => {
+    setFormNovoAberto(true);
+    setTimeout(() => {
+      formNovoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      inputNomeRef.current?.focus();
+    }, 60);
+  };
 
   // Estado do Modal de Composição Técnica
   const [servicoEmEdicao, setServicoEmEdicao] = useState<Servico | null>(null);
@@ -223,7 +234,7 @@ export const ServicesList: React.FC = () => {
         <button 
           type="button" 
           className="btn-dark"
-          onClick={() => setFormNovoAberto(true)}
+          onClick={handleNovoServicoClick}
         >
           Novo serviço
         </button>
@@ -339,8 +350,11 @@ export const ServicesList: React.FC = () => {
 
       {/* Seção / Card NOVO SERVIÇO (Destaque Figma Image 3) */}
       {formNovoAberto && (
-        <div className="dashboard-card dashboard-card-highlight">
-          <div className="category-breadcrumb">NOVO SERVIÇO</div>
+        <div 
+          ref={formNovoRef}
+          className="dashboard-card dashboard-card-highlight"
+          style={{ scrollMarginTop: '1.5rem' }}
+        >
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#0F172A' }}>
             Novo serviço
           </h2>
@@ -371,6 +385,7 @@ export const ServicesList: React.FC = () => {
                   Nome do serviço
                 </label>
                 <input 
+                  ref={inputNomeRef}
                   type="text"
                   placeholder="Ex: Banner sob medida"
                   className="header-search"
