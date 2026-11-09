@@ -20,6 +20,7 @@ DECLARE
   v_cliente  INTEGER;
   v_material INTEGER;
   v_servico  INTEGER;
+  v_perfil   VARCHAR(20) := 'FUNCIONARIO';
   v_falhas   INTEGER := 0;
   v_c        TEXT;
 BEGIN
@@ -198,6 +199,73 @@ BEGIN
   END;
 
   -- ===================================================================
+  -- PERFIS E SENHA EM HASH (RF-12, RF-13)
+  -- ===================================================================
+
+  -- T15: funcionario com perfil inexistente
+  BEGIN
+    INSERT INTO funcionario (nome, senha_hash, perfil)
+      VALUES ('Funcionario perfil invalido', '$2a$10$mvn1GQqMwLMClr7wK3Fi9.rwAxw89HcC6qoGFJ6ZNPfyQI6BfnTyy', 'INEXISTENTE');
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'T15 FALHOU - funcionario com perfil inexistente foi ACEITO';
+  EXCEPTION WHEN foreign_key_violation THEN
+    GET STACKED DIAGNOSTICS v_c = CONSTRAINT_NAME;
+    RAISE NOTICE 'T15 OK     - rejeitado por %', v_c;
+  END;
+
+  -- T16: funcionario sem perfil
+  BEGIN
+    INSERT INTO funcionario (nome, senha_hash, perfil)
+      VALUES ('Funcionario sem perfil', '$2a$10$mvn1GQqMwLMClr7wK3Fi9.rwAxw89HcC6qoGFJ6ZNPfyQI6BfnTyy', NULL);
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'T16 FALHOU - funcionario sem perfil foi ACEITO';
+  EXCEPTION WHEN not_null_violation THEN
+    RAISE NOTICE 'T16 OK     - rejeitado por NOT NULL em funcionario.perfil';
+  END;
+
+  -- T17: perfil com codigo duplicado
+  BEGIN
+    INSERT INTO perfil (codigo, nome) VALUES ('ADMINISTRADOR', 'Outro nome');
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'T17 FALHOU - perfil com codigo duplicado foi ACEITO';
+  EXCEPTION WHEN unique_violation THEN
+    GET STACKED DIAGNOSTICS v_c = CONSTRAINT_NAME;
+    RAISE NOTICE 'T17 OK     - rejeitado por %', v_c;
+  END;
+
+  -- T18: apagar perfil que esta em uso por funcionarios
+  BEGIN
+    DELETE FROM perfil WHERE codigo = v_perfil;
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'T18 FALHOU - perfil em uso foi APAGADO';
+  EXCEPTION WHEN foreign_key_violation THEN
+    GET STACKED DIAGNOSTICS v_c = CONSTRAINT_NAME;
+    RAISE NOTICE 'T18 OK     - rejeitado por %', v_c;
+  END;
+
+  -- T19: senha em texto puro
+  BEGIN
+    INSERT INTO funcionario (nome, senha_hash, perfil)
+      VALUES ('Funcionario senha pura', '123456', v_perfil);
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'T19 FALHOU - senha em texto puro foi ACEITA';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_c = CONSTRAINT_NAME;
+    RAISE NOTICE 'T19 OK     - rejeitado por %', v_c;
+  END;
+
+  -- T20: valor que parece hash, mas nao e um hash BCrypt completo
+  BEGIN
+    INSERT INTO funcionario (nome, senha_hash, perfil)
+      VALUES ('Funcionario hash curto', '$2b$10$abc', v_perfil);
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'T20 FALHOU - hash BCrypt incompleto foi ACEITO';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_c = CONSTRAINT_NAME;
+    RAISE NOTICE 'T20 OK     - rejeitado por %', v_c;
+  END;
+
+  -- ===================================================================
   -- CONTROLES: dados validos que DEVEM ser aceitos
   -- ===================================================================
 
@@ -219,6 +287,16 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     v_falhas := v_falhas + 1;
     RAISE NOTICE 'P02 FALHOU - rascunho foi rejeitado: %', SQLERRM;
+  END;
+
+  -- P03: funcionario com perfil e senha em hash BCrypt valido
+  BEGIN
+    INSERT INTO funcionario (nome, senha_hash, perfil)
+      VALUES ('Funcionario valido (teste)', '$2a$10$mvn1GQqMwLMClr7wK3Fi9.rwAxw89HcC6qoGFJ6ZNPfyQI6BfnTyy', v_perfil);
+    RAISE NOTICE 'P03 OK     - aceito: funcionario com perfil e senha em hash';
+  EXCEPTION WHEN OTHERS THEN
+    v_falhas := v_falhas + 1;
+    RAISE NOTICE 'P03 FALHOU - funcionario valido foi rejeitado: %', SQLERRM;
   END;
 
   -- ===================================================================

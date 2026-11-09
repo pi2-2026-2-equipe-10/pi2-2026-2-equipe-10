@@ -1,6 +1,10 @@
 package com.grafica.api.controller;
 
 import com.grafica.api.exception.ApiException;
+import com.grafica.api.model.Funcionario;
+import com.grafica.api.model.Perfil;
+import com.grafica.api.repository.FuncionarioRepository;
+import com.grafica.api.repository.PerfilRepository;
 import com.grafica.api.security.JwtUtil;
 import com.grafica.api.util.Validacao;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,12 +12,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @Tag(name = "Funcionários e Autenticação", description = "Endpoints de autenticação, listagem e cadastro de colaboradores com RBAC")
@@ -25,14 +29,14 @@ public class FuncionarioController {
 
     public record LoginResposta(String token, FuncionarioResumo funcionario) {}
 
-    private record LinhaLogin(int id, String nome, String senhaHash, boolean ativo, String perfil) {}
-
     private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
-    private final JdbcClient jdbc;
+    private final FuncionarioRepository funcionarios;
+    private final PerfilRepository perfis;
 
-    public FuncionarioController(JdbcClient jdbc) {
-        this.jdbc = jdbc;
+    public FuncionarioController(FuncionarioRepository funcionarios, PerfilRepository perfis) {
+        this.funcionarios = funcionarios;
+        this.perfis = perfis;
     }
 
     // GET /funcionarios — só ativos, em ordem alfabética, sem expor senha
@@ -40,12 +44,9 @@ public class FuncionarioController {
     @Operation(summary = "Listar funcionários ativos (RF013)", description = "Retorna a lista de colaboradores ativos para seleção na tela de login.")
     @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
     public List<FuncionarioResumo> listar() {
-        return jdbc.sql("SELECT id, nome, perfil FROM funcionario WHERE ativo = TRUE ORDER BY nome")
-                .query((rs, i) -> new FuncionarioResumo(
-                        rs.getInt("id"),
-                        rs.getString("nome"),
-                        rs.getString("perfil") != null ? rs.getString("perfil") : "FUNCIONARIO"))
-                .list();
+        return funcionarios.listarAtivos().stream()
+                .map(f -> new FuncionarioResumo(f.id(), f.nome(), f.perfil()))
+                .toList();
     }
 
     // POST /login
@@ -70,16 +71,7 @@ public class FuncionarioController {
             throw new ApiException(401, "Funcionário não encontrado ou inativo.");
         }
 
-        LinhaLogin f = jdbc.sql("SELECT id, nome, senha_hash, ativo, perfil FROM funcionario WHERE id = :id")
-                .param("id", id.intValue())
-                .query((rs, i) -> new LinhaLogin(
-                        rs.getInt("id"),
-                        rs.getString("nome"),
-                        rs.getString("senha_hash"),
-                        rs.getBoolean("ativo"),
-                        rs.getString("perfil") != null ? rs.getString("perfil") : "FUNCIONARIO"))
-                .optional()
-                .orElse(null);
+        FuncionarioRepository.Credenciais f = funcionarios.buscarCredenciais(id.intValue()).orElse(null);
 
         if (f == null || !f.ativo()) {
             throw new ApiException(401, "Funcionário não encontrado ou inativo.");
@@ -119,29 +111,29 @@ public class FuncionarioController {
         String nome = ((String) nomeObj).trim();
         String senha = (String) senhaObj;
 
+        // O perfil precisa existir na tabela perfil; sem perfil informado, vale FUNCIONARIO
         String perfil = "FUNCIONARIO";
-        if (perfilObj != null && !((String) perfilObj).toString().isBlank()) {
-            String p = ((String) perfilObj).toString().trim().toUpperCase();
-            if (!"ADMINISTRADOR".equals(p) && !"FUNCIONARIO".equals(p)) {
-                throw new ApiException(400, "Perfil inválido. Utilize 'ADMINISTRADOR' ou 'FUNCIONARIO'.");
+        if (perfilObj != null) {
+            if (!(perfilObj instanceof String texto)) {
+                throw new ApiException(400, "O campo 'perfil' deve ser um texto.");
             }
-            perfil = p;
+            if (!texto.isBlank()) {
+                String codigo = texto.trim().toUpperCase();
+                if (!perfis.existe(codigo)) {
+                    String validos = perfis.listar().stream().map(Perfil::codigo).collect(Collectors.joining(", "));
+                    throw new ApiException(400, "Perfil inválido. Utilize um dos perfis: " + validos + ".");
+                }
+                perfil = codigo;
+            }
         }
 
         boolean ativo = ativoObj == null || Boolean.TRUE.equals(ativoObj);
         String hash = ENCODER.encode(senha);
 
-        int novoId = jdbc.sql("""
-                INSERT INTO funcionario (nome, senha_hash, ativo, perfil)
-                VALUES (:nome, :hash, :ativo, :perfil) RETURNING id
-                """)
-                .param("nome", nome)
-                .param("hash", hash)
-                .param("ativo", ativo)
-                .param("perfil", perfil)
-                .query(Integer.class)
-                .single();
+        int novoId = funcionarios.cadastrar(nome, hash, ativo, perfil);
 
-        return new FuncionarioCriado(novoId, nome, perfil, ativo);
+        Funcionario criado = funcionarios.buscarPorId(novoId)
+                .orElseThrow(() -> new ApiException(500, "Funcionário cadastrado, mas não encontrado em seguida."));
+        return new FuncionarioCriado(criado.id(), criado.nome(), criado.perfil(), criado.ativo());
     }
 }
