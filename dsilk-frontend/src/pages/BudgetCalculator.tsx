@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { orcamentoService } from '../services/orcamentoService';
@@ -11,31 +11,33 @@ import {
   CheckCircle, 
   X,
   RefreshCw,
-  Calculator
+  Calculator,
+  Layers
 } from 'lucide-react';
 
 export const BudgetCalculator: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orcamentoIdParam = searchParams.get('id');
+  const clienteIdParam = searchParams.get('clienteId');
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [materiais, setMateriais] = useState<Material[]>([]);
 
-  // Campos do Formulário
+  // Campos do Formulário (sem custo fixo artificial)
   const [clienteId, setClienteId] = useState<number | ''>('');
   const [validade, setValidade] = useState('7 dias');
   const [servicoId, setServicoId] = useState<number | ''>('');
   const [materialId, setMaterialId] = useState<number | ''>('');
-  const [quantidade, setQuantidade] = useState<string>('40');
-  const [cor, setCor] = useState('Preto');
-  const [tamanhos, setTamanhos] = useState('P: 10 - M: 15 - G: 15');
+  const [quantidade, setQuantidade] = useState<string>('1');
+  const [cor, setCor] = useState('Padrão');
+  const [tamanhos, setTamanhos] = useState('Sob medida');
   const [largura, setLargura] = useState<string>('2.0');
   const [altura, setAltura] = useState<string>('1.5');
   const [areasImpressao, setAreasImpressao] = useState<string[]>(['Frente A4']);
 
-  const [custoCalculado, setCustoCalculado] = useState<number | null>(1380);
+  const [custoCalculado, setCustoCalculado] = useState<number | null>(null);
   const [loadingDados, setLoadingDados] = useState(true);
   const [calculando, setCalculando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -50,8 +52,48 @@ export const BudgetCalculator: React.FC = () => {
   const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [erroModalCliente, setErroModalCliente] = useState<string | null>(null);
 
-  const servicoSelecionado = servicos.find(s => s.id === Number(servicoId));
-  const clienteSelecionado = clientes.find(c => c.id === Number(clienteId));
+  const servicoSelecionado = servicos.find((s) => s.id === Number(servicoId));
+  const clienteSelecionado = clientes.find((c) => c.id === Number(clienteId));
+
+  // Verifica RN-01: Serviço por composição sem itens configurados
+  const composicaoPendenteRN01 =
+    servicoSelecionado?.tipoCalculo === 'COMPOSICAO' &&
+    Array.isArray(servicoSelecionado.itens) &&
+    servicoSelecionado.itens.length === 0;
+
+  const executarCalculoApi = useCallback(
+    async (idServico: number, tipoCalc: string | undefined, largStr: string, altStr: string) => {
+      try {
+        setCalculando(true);
+        setErro(null);
+
+        const payload: { servicoId: number; largura?: number; altura?: number } = {
+          servicoId: idServico,
+        };
+
+        if (tipoCalc === 'METRAGEM') {
+          const l = parseFloat(largStr.replace(',', '.'));
+          const a = parseFloat(altStr.replace(',', '.'));
+          if (isNaN(l) || l <= 0 || isNaN(a) || a <= 0) {
+            setErro('Para serviços por metragem (RN-03), informe largura e altura maiores que zero.');
+            setCustoCalculado(null);
+            return;
+          }
+          payload.largura = l;
+          payload.altura = a;
+        }
+
+        const res = await orcamentoService.calcular(payload);
+        setCustoCalculado(res.custo);
+      } catch (err) {
+        setCustoCalculado(null);
+        setErro(getApiErrorMessage(err, 'Não foi possível calcular o custo do orçamento.'));
+      } finally {
+        setCalculando(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     const carregarTudo = async () => {
@@ -67,23 +109,44 @@ export const BudgetCalculator: React.FC = () => {
         setServicos(listaServicos);
         setMateriais(listaMateriais);
 
-        if (listaClientes.length > 0) {
-          setClienteId(listaClientes[0].id);
-        }
-        if (listaServicos.length > 0) {
-          setServicoId(listaServicos[0].id);
-        }
         if (listaMateriais.length > 0) {
           setMaterialId(listaMateriais[0].id);
         }
 
         if (orcamentoIdParam) {
           const orc = await orcamentoService.buscarPorId(orcamentoIdParam);
-          if (orc.clienteId) setClienteId(orc.clienteId);
-          if (orc.servicoId) setServicoId(orc.servicoId);
-          if (orc.largura) setLargura(String(orc.largura));
-          if (orc.altura) setAltura(String(orc.altura));
-          if (orc.custoTotal != null) setCustoCalculado(orc.custoTotal);
+          setClienteId(orc.clienteId ?? '');
+          const srvId = orc.servicoId ?? (listaServicos[0]?.id || '');
+          setServicoId(srvId);
+          const larg = orc.largura ? String(orc.largura) : '2.0';
+          const alt = orc.altura ? String(orc.altura) : '1.5';
+          setLargura(larg);
+          setAltura(alt);
+
+          if (orc.custoTotal != null) {
+            setCustoCalculado(orc.custoTotal);
+          } else if (srvId) {
+            const srv = listaServicos.find((s) => s.id === Number(srvId));
+            await executarCalculoApi(Number(srvId), srv?.tipoCalculo, larg, alt);
+          }
+        } else {
+          // Novo orçamento: pré-seleciona cliente da URL (?clienteId=...) ou primeiro cliente disponível
+          if (clienteIdParam && listaClientes.some((c) => String(c.id) === String(clienteIdParam))) {
+            setClienteId(Number(clienteIdParam));
+          } else if (listaClientes.length > 0) {
+            setClienteId(listaClientes[0].id);
+          }
+
+          if (listaServicos.length > 0) {
+            const primeiroServico = listaServicos[0];
+            setServicoId(primeiroServico.id);
+            await executarCalculoApi(
+              primeiroServico.id,
+              primeiroServico.tipoCalculo,
+              '2.0',
+              '1.5'
+            );
+          }
         }
       } catch (err) {
         setErro(getApiErrorMessage(err, 'Falha ao carregar informações para o orçamento.'));
@@ -93,11 +156,11 @@ export const BudgetCalculator: React.FC = () => {
     };
 
     carregarTudo();
-  }, [orcamentoIdParam]);
+  }, [orcamentoIdParam, clienteIdParam, executarCalculoApi]);
 
   const toggleAreaImpressao = (area: string) => {
     if (areasImpressao.includes(area)) {
-      setAreasImpressao(areasImpressao.filter(a => a !== area));
+      setAreasImpressao(areasImpressao.filter((a) => a !== area));
     } else {
       setAreasImpressao([...areasImpressao, area]);
     }
@@ -105,31 +168,12 @@ export const BudgetCalculator: React.FC = () => {
 
   const calcularCusto = async () => {
     if (!servicoId) return;
-
-    try {
-      setCalculando(true);
-      setErro(null);
-
-      const payload: { servicoId: number; largura?: number; altura?: number } = {
-        servicoId: Number(servicoId),
-      };
-
-      if (servicoSelecionado?.tipoCalculo === 'METRAGEM') {
-        const l = parseFloat(largura.replace(',', '.'));
-        const a = parseFloat(altura.replace(',', '.'));
-        if (!isNaN(l) && l > 0 && !isNaN(a) && a > 0) {
-          payload.largura = l;
-          payload.altura = a;
-        }
-      }
-
-      const res = await orcamentoService.calcular(payload);
-      setCustoCalculado(res.custo);
-    } catch (err) {
-      setErro(getApiErrorMessage(err, 'Não foi possível calcular o custo do orçamento.'));
-    } finally {
-      setCalculando(false);
-    }
+    await executarCalculoApi(
+      Number(servicoId),
+      servicoSelecionado?.tipoCalculo,
+      largura,
+      altura
+    );
   };
 
   const handleSalvar = async (comoRascunho: boolean) => {
@@ -146,8 +190,14 @@ export const BudgetCalculator: React.FC = () => {
         rascunho: comoRascunho,
         clienteId: clienteId ? Number(clienteId) : null,
         servicoId: Number(servicoId),
-        largura: servicoSelecionado?.tipoCalculo === 'METRAGEM' ? parseFloat(largura.replace(',', '.')) : null,
-        altura: servicoSelecionado?.tipoCalculo === 'METRAGEM' ? parseFloat(altura.replace(',', '.')) : null,
+        largura:
+          servicoSelecionado?.tipoCalculo === 'METRAGEM'
+            ? parseFloat(largura.replace(',', '.'))
+            : null,
+        altura:
+          servicoSelecionado?.tipoCalculo === 'METRAGEM'
+            ? parseFloat(altura.replace(',', '.'))
+            : null,
       };
 
       if (orcamentoIdParam) {
@@ -155,7 +205,11 @@ export const BudgetCalculator: React.FC = () => {
         setSucesso('Orçamento atualizado com sucesso!');
       } else {
         await orcamentoService.criar(payload);
-        setSucesso(comoRascunho ? 'Orçamento salvo como rascunho com sucesso!' : 'Proposta de orçamento registrada com sucesso!');
+        setSucesso(
+          comoRascunho
+            ? 'Orçamento salvo como rascunho com sucesso!'
+            : 'Proposta de orçamento registrada com sucesso!'
+        );
       }
 
       setTimeout(() => {
@@ -197,22 +251,30 @@ export const BudgetCalculator: React.FC = () => {
     }
   };
 
-  const orcamentoNumeroFormatado = orcamentoIdParam 
-    ? `#00${orcamentoIdParam}` 
-    : '#0052';
+  const orcamentoNumeroFormatado = orcamentoIdParam
+    ? `#${String(orcamentoIdParam).padStart(4, '0')}`
+    : 'Nova Proposta';
 
-  const nomeExibicaoCliente = clienteSelecionado?.nome || 'Ana Clara Studio';
-  const valorTotalFormatado = custoCalculado != null 
-    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(custoCalculado) 
-    : 'R$ 1.380,00';
+  const nomeExibicaoCliente =
+    clienteSelecionado?.nome || 'Sem cliente vinculado (RN-04)';
+
+  const formatarMoeda = (valor: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+
+  const valorTotalFormatado =
+    custoCalculado != null ? formatarMoeda(custoCalculado) : 'Aguardando cálculo';
 
   return (
     <DashboardLayout activeMenu="Orçamentos">
-      {/* Cabeçalho estilo Figma (Image 4) */}
+      {/* Cabeçalho estilo Figma */}
       <div style={{ marginBottom: '1.75rem' }}>
         <div className="category-breadcrumb">ORÇAMENTOS</div>
-        <h1 className="page-main-title">Novo orçamento</h1>
-        <p className="page-main-subtitle">Monte uma proposta completa em poucos passos.</p>
+        <h1 className="page-main-title">
+          {orcamentoIdParam ? `Editar orçamento #${orcamentoIdParam}` : 'Novo orçamento'}
+        </h1>
+        <p className="page-main-subtitle">
+          Monte uma proposta completa com cálculo automático por metragem ou composição técnica.
+        </p>
       </div>
 
       {sucesso && (
@@ -244,12 +306,72 @@ export const BudgetCalculator: React.FC = () => {
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
             border: '1px solid #fca5a5',
           }}
         >
-          <AlertCircle size={20} />
-          <span>{erro}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertCircle size={20} style={{ flexShrink: 0 }} />
+            <span>{erro}</span>
+          </div>
+          {servicoSelecionado?.tipoCalculo === 'COMPOSICAO' && (
+            <button
+              type="button"
+              onClick={() => navigate('/services')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#b91c1c',
+                fontWeight: 700,
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Configurar composição →
+            </button>
+          )}
+        </div>
+      )}
+
+      {composicaoPendenteRN01 && !erro && (
+        <div
+          style={{
+            backgroundColor: '#FFFBEB',
+            color: '#92400E',
+            padding: '0.9rem 1.1rem',
+            borderRadius: '8px',
+            marginBottom: '1.5rem',
+            border: '1px solid #FDE68A',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.875rem' }}>
+            <Layers size={18} style={{ flexShrink: 0 }} />
+            <span>
+              <strong>RN-01:</strong> Este serviço por composição ainda não possui materiais configurados.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/services')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#B45309',
+              fontWeight: 700,
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Ir para Serviços
+          </button>
         </div>
       )}
 
@@ -259,7 +381,7 @@ export const BudgetCalculator: React.FC = () => {
           <p>Carregando dados para orçamento...</p>
         </div>
       ) : (
-        /* Layout em 2 Colunas (Figma Image 4) */
+        /* Layout em 2 Colunas */
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem', alignItems: 'start' }}>
           {/* Coluna Esquerda: Passos 1 e 2 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -269,7 +391,7 @@ export const BudgetCalculator: React.FC = () => {
                 <div className="step-number-badge">1</div>
                 <div>
                   <h3 className="step-title">Cliente</h3>
-                  <p className="step-subtitle">Para quem é este orçamento?</p>
+                  <p className="step-subtitle">Para quem é este orçamento? (Associação opcional — RN-04)</p>
                 </div>
               </div>
 
@@ -293,6 +415,7 @@ export const BudgetCalculator: React.FC = () => {
                     value={clienteId}
                     onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : '')}
                   >
+                    <option value="">Sem cliente vinculado (RN-04)</option>
                     {clientes.map((cli) => (
                       <option key={cli.id} value={cli.id}>
                         {cli.nome}
@@ -322,7 +445,7 @@ export const BudgetCalculator: React.FC = () => {
                 <div className="step-number-badge">2</div>
                 <div>
                   <h3 className="step-title">Composição do pedido</h3>
-                  <p className="step-subtitle">Defina material, quantidade e impressão.</p>
+                  <p className="step-subtitle">Defina serviço, dimensões ou especificações técnicas.</p>
                 </div>
               </div>
 
@@ -336,9 +459,11 @@ export const BudgetCalculator: React.FC = () => {
                       className="header-search"
                       style={{ width: '100%', paddingLeft: '0.85rem', backgroundColor: '#FFFFFF', appearance: 'auto' }}
                       value={servicoId}
-                      onChange={(e) => {
-                        setServicoId(Number(e.target.value));
-                        setCustoCalculado(null);
+                      onChange={async (e) => {
+                        const novoId = Number(e.target.value);
+                        setServicoId(novoId);
+                        const srv = servicos.find((s) => s.id === novoId);
+                        await executarCalculoApi(novoId, srv?.tipoCalculo, largura, altura);
                       }}
                     >
                       {servicos.map((s) => (
@@ -356,12 +481,12 @@ export const BudgetCalculator: React.FC = () => {
                     <select
                       className="header-search"
                       style={{ width: '100%', paddingLeft: '0.85rem', backgroundColor: '#FFFFFF', appearance: 'auto' }}
-                      value={materialId}
+                      value={servicoSelecionado?.material?.id || materialId}
                       onChange={(e) => setMaterialId(Number(e.target.value))}
                     >
                       {materiais.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.nome}
+                          {m.nome} ({formatarMoeda(m.custo)}/{m.unidadeMedida})
                         </option>
                       ))}
                     </select>
@@ -371,12 +496,12 @@ export const BudgetCalculator: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.35rem' }}>
-                      Quantidade
+                      Quantidade (referência)
                     </label>
                     <input
                       type="number"
                       min="1"
-                      placeholder="40"
+                      placeholder="1"
                       className="header-search"
                       style={{ width: '100%', paddingLeft: '0.85rem', backgroundColor: '#FFFFFF' }}
                       value={quantidade}
@@ -393,11 +518,15 @@ export const BudgetCalculator: React.FC = () => {
                         <input
                           type="number"
                           step="0.1"
+                          min="0.1"
                           placeholder="2.0"
                           className="header-search"
                           style={{ width: '100%', paddingLeft: '0.85rem', backgroundColor: '#FFFFFF' }}
                           value={largura}
-                          onChange={(e) => setLargura(e.target.value)}
+                          onChange={(e) => {
+                            setLargura(e.target.value);
+                            setCustoCalculado(null);
+                          }}
                         />
                       </div>
                       <div>
@@ -407,11 +536,15 @@ export const BudgetCalculator: React.FC = () => {
                         <input
                           type="number"
                           step="0.1"
+                          min="0.1"
                           placeholder="1.5"
                           className="header-search"
                           style={{ width: '100%', paddingLeft: '0.85rem', backgroundColor: '#FFFFFF' }}
                           value={altura}
-                          onChange={(e) => setAltura(e.target.value)}
+                          onChange={(e) => {
+                            setAltura(e.target.value);
+                            setCustoCalculado(null);
+                          }}
                         />
                       </div>
                     </div>
@@ -419,7 +552,7 @@ export const BudgetCalculator: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.35rem' }}>
-                          Cor
+                          Cor / Acabamento
                         </label>
                         <input
                           type="text"
@@ -495,7 +628,7 @@ export const BudgetCalculator: React.FC = () => {
                       style={{ fontSize: '0.825rem', padding: '0.55rem 1rem' }}
                     >
                       <Calculator size={15} />
-                      {calculando ? 'Calculando...' : 'Recalcular Custo'}
+                      {calculando ? 'Calculando...' : 'Calcular Custo'}
                     </button>
                   </div>
                 </div>
@@ -503,7 +636,7 @@ export const BudgetCalculator: React.FC = () => {
             </div>
           </div>
 
-          {/* Coluna Direita: Card Escuro — RESUMO DA PROPOSTA (Figma Image 4) */}
+          {/* Coluna Direita: Card Escuro — RESUMO DA PROPOSTA (Dados reais) */}
           <div>
             <div className="proposal-summary-card">
               <div className="proposal-summary-tag">RESUMO DA PROPOSTA</div>
@@ -515,23 +648,32 @@ export const BudgetCalculator: React.FC = () => {
               <div className="proposal-divider"></div>
 
               <div className="proposal-item-row">
-                <span>{quantidade} {servicoSelecionado?.nome || 'camisetas'}</span>
+                <span>{servicoSelecionado?.nome || 'Serviço não selecionado'}</span>
                 <span style={{ fontWeight: 600 }}>
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(custoCalculado ? custoCalculado * 0.8 : 1120)}
+                  {servicoSelecionado?.tipoCalculo === 'METRAGEM'
+                    ? `${largura || 0}m × ${altura || 0}m`
+                    : 'Por Composição'}
                 </span>
               </div>
 
               <div className="proposal-item-row">
-                <span>Estampa frontal A4</span>
+                <span>
+                  {servicoSelecionado?.tipoCalculo === 'METRAGEM'
+                    ? `Área total (${(
+                        (parseFloat(largura.replace(',', '.')) || 0) *
+                        (parseFloat(altura.replace(',', '.')) || 0)
+                      ).toFixed(2)} m²)`
+                    : `Áreas: ${areasImpressao.join(', ') || 'Padrão'}`}
+                </span>
                 <span style={{ fontWeight: 600 }}>
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(custoCalculado ? custoCalculado * 0.2 : 260)}
+                  {custoCalculado != null ? formatarMoeda(custoCalculado) : '—'}
                 </span>
               </div>
 
               <div className="proposal-divider"></div>
 
               <div className="proposal-total-row">
-                <span className="proposal-total-label">Total estimado</span>
+                <span className="proposal-total-label">Total calculado</span>
                 <span className="proposal-total-value">{valorTotalFormatado}</span>
               </div>
 
@@ -539,10 +681,14 @@ export const BudgetCalculator: React.FC = () => {
                 type="button"
                 className="btn-cyan"
                 onClick={() => handleSalvar(false)}
-                disabled={salvando}
+                disabled={salvando || calculando}
                 style={{ width: '100%', marginBottom: '0.75rem' }}
               >
-                {salvando ? 'Salvando...' : 'Continuar'}
+                {salvando
+                  ? 'Salvando...'
+                  : orcamentoIdParam
+                  ? 'Atualizar e Registrar'
+                  : 'Registrar Orçamento'}
               </button>
 
               <div style={{ textAlign: 'center' }}>
