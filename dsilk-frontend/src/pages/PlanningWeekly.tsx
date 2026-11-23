@@ -99,7 +99,7 @@ export const PlanningWeekly: React.FC = () => {
     setModalAberto(true);
   };
 
-  const fecharModal = () => {
+  const fecharModal = useCallback(() => {
     if (salvando) return;
     setModalAberto(false);
     setAtividadeEmEdicao(null);
@@ -107,7 +107,19 @@ export const PlanningWeekly: React.FC = () => {
     setDescricao('');
     setDataAtividade('');
     setErroModal(null);
-  };
+  }, [salvando]);
+
+  // Acessibilidade: fechar modal de agendamento com tecla Escape
+  useEffect(() => {
+    if (!modalAberto) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        fecharModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalAberto, fecharModal]);
 
   const handleSalvarAtividade = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +272,7 @@ export const PlanningWeekly: React.FC = () => {
           >
             <button
               type="button"
+              aria-label="Semana anterior"
               onClick={() => navegarSemana(-7)}
               title="Semana anterior"
               style={{
@@ -295,6 +308,7 @@ export const PlanningWeekly: React.FC = () => {
 
             <button
               type="button"
+              aria-label="Próxima semana"
               onClick={() => navegarSemana(7)}
               title="Próxima semana"
               style={{
@@ -381,6 +395,7 @@ export const PlanningWeekly: React.FC = () => {
             {busca && (
               <button
                 type="button"
+                aria-label="Limpar filtro de atividade"
                 onClick={() => setBusca('')}
                 style={{
                   position: 'absolute',
@@ -463,6 +478,7 @@ export const PlanningWeekly: React.FC = () => {
           </div>
           <button
             type="button"
+            aria-label="Dispensar mensagem de sucesso"
             onClick={() => setSucesso(null)}
             style={{ background: 'none', border: 'none', color: '#15803d', cursor: 'pointer' }}
           >
@@ -556,6 +572,7 @@ export const PlanningWeekly: React.FC = () => {
 
                     <button
                       type="button"
+                      aria-label={`Agendar atividade em ${nomeDia} (${dataFormatada})`}
                       onClick={() => abrirModalCriar(diaItem.dia)}
                       title={`Agendar atividade em ${nomeDia} (${dataFormatada})`}
                       style={{
@@ -700,6 +717,7 @@ export const PlanningWeekly: React.FC = () => {
               </div>
               <button
                 type="button"
+                aria-label="Fechar modal de atividade"
                 onClick={fecharModal}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
               >

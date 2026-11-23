@@ -64,6 +64,18 @@ export const BudgetCalculator: React.FC = () => {
   const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [erroModalCliente, setErroModalCliente] = useState<string | null>(null);
 
+  // Acessibilidade: fechar modal com tecla Escape
+  useEffect(() => {
+    if (!modalClienteAberto) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !salvandoCliente) {
+        setModalClienteAberto(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalClienteAberto, salvandoCliente]);
+
   const servicoSelecionado =
     servicoDetalhado && servicoDetalhado.id === Number(servicoId)
       ? servicoDetalhado
@@ -213,7 +225,7 @@ export const BudgetCalculator: React.FC = () => {
 
     if (!comoRascunho && ehMetragem) {
       if (!largNum || largNum <= 0 || !altNum || altNum <= 0) {
-        setErro('Para registrar um orçamento por metragem (RN-03), informe largura e altura maiores que zero.');
+        setErro('Para registrar um orçamento por metragem, informe largura e altura maiores que zero.');
         return;
       }
     }
@@ -374,6 +386,7 @@ export const BudgetCalculator: React.FC = () => {
           </div>
           <button
             type="button"
+            aria-label="Dispensar mensagem de erro"
             onClick={() => setErro(null)}
             style={{ background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer' }}
           >
@@ -388,7 +401,7 @@ export const BudgetCalculator: React.FC = () => {
           <p style={{ margin: 0, fontWeight: 500 }}>Carregando catálogo de serviços e clientes...</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: '1.75rem', alignItems: 'start' }}>
+        <div className="budget-calculator-grid">
           {/* Coluna Esquerda: Passos Claros e Diretos */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
             
@@ -523,8 +536,8 @@ export const BudgetCalculator: React.FC = () => {
                 <div>
                   <h3 className="step-title">
                     {servicoSelecionado?.tipoCalculo === 'METRAGEM'
-                      ? 'Informe as Dimensões em Metros (RF-06 / RN-03)'
-                      : 'Ficha Técnica da Composição (RF-07 / RN-01)'}
+                      ? 'Informe as Dimensões em Metros'
+                      : 'Ficha Técnica da Composição'}
                   </h3>
                   <p className="step-subtitle">
                     {servicoSelecionado?.tipoCalculo === 'METRAGEM'
@@ -605,7 +618,7 @@ export const BudgetCalculator: React.FC = () => {
                   </div>
 
                   {/* Inputs de Largura e Altura */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', alignItems: 'end' }}>
+                  <div className="dimensions-input-grid">
                     <div>
                       <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.35rem' }}>
                         Largura (metros) *
@@ -681,7 +694,7 @@ export const BudgetCalculator: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.875rem' }}>
                         <Layers size={18} style={{ flexShrink: 0 }} />
                         <span>
-                          <strong>RN-01:</strong> Este serviço por composição ainda não possui materiais cadastrados na ficha técnica.
+                          Este serviço por composição ainda não possui materiais cadastrados na ficha técnica.
                         </span>
                       </div>
                       <button
@@ -737,7 +750,7 @@ export const BudgetCalculator: React.FC = () => {
               )}
             </div>
 
-            {/* PASSO 3: Cliente (Opcional — RN-04) */}
+            {/* PASSO 3: Cliente (Opcional) */}
             <div className="dashboard-card" style={{ padding: '1.5rem 1.75rem' }}>
               <div
                 style={{
@@ -752,7 +765,7 @@ export const BudgetCalculator: React.FC = () => {
                 <div className="step-header" style={{ marginBottom: 0 }}>
                   <div className="step-number-badge">3</div>
                   <div>
-                    <h3 className="step-title">Cliente (Opcional — RN-04)</h3>
+                    <h3 className="step-title">Cliente (Opcional)</h3>
                     <p className="step-subtitle">
                       Associe a um cliente cadastrado ou mantenha como orçamento avulso.
                     </p>
@@ -776,7 +789,7 @@ export const BudgetCalculator: React.FC = () => {
                 value={clienteId}
                 onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : '')}
               >
-                <option value="">Sem cliente vinculado (Orçamento avulso — RN-04)</option>
+                <option value="">Sem cliente vinculado (Orçamento avulso)</option>
                 {clientes.map((cli) => (
                   <option key={cli.id} value={cli.id}>
                     {cli.nome} {cli.telefone ? `— ${cli.telefone}` : ''}
@@ -952,6 +965,7 @@ export const BudgetCalculator: React.FC = () => {
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Cadastrar Novo Cliente</h3>
               <button 
                 type="button" 
+                aria-label="Fechar modal de cadastro de cliente"
                 onClick={() => setModalClienteAberto(false)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7 }}
               >

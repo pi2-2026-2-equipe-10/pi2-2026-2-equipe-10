@@ -113,11 +113,29 @@ export const ClientsList: React.FC = () => {
     setModalAberto(true);
   };
 
-  const fecharModal = () => {
+  const fecharModal = useCallback(() => {
     if (salvando) return;
     setModalAberto(false);
     setErroModal(null);
-  };
+  }, [salvando]);
+
+  // Acessibilidade: fechar modais com tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (modalAberto) fecharModal();
+        if (clientePerfil) {
+          setClientePerfil(null);
+          if (clienteIdQuery) {
+            searchParams.delete('clienteId');
+            setSearchParams(searchParams, { replace: true });
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalAberto, clientePerfil, fecharModal, clienteIdQuery, searchParams, setSearchParams]);
 
   const handleSalvarCliente = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,6 +258,7 @@ export const ClientsList: React.FC = () => {
           </div>
           <button 
             type="button" 
+            aria-label="Dispensar mensagem de sucesso"
             onClick={() => setSucesso(null)} 
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d' }}
           >
@@ -459,7 +478,7 @@ export const ClientsList: React.FC = () => {
               }}
             >
               <div>
-                <div className="category-breadcrumb">PERFIL DO CLIENTE (TEL-09)</div>
+                <div className="category-breadcrumb">PERFIL DO CLIENTE</div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0.2rem 0', color: '#0F172A' }}>
                   {clientePerfil.nome}
                 </h3>
@@ -486,6 +505,7 @@ export const ClientsList: React.FC = () => {
 
               <button
                 type="button"
+                aria-label="Fechar perfil do cliente"
                 onClick={fecharPerfilCliente}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
               >
@@ -706,6 +726,7 @@ export const ClientsList: React.FC = () => {
               </div>
               <button 
                 type="button" 
+                aria-label="Fechar modal de cadastro de cliente"
                 onClick={fecharModal} 
                 disabled={salvando}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7 }}

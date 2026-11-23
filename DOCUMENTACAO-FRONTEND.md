@@ -157,13 +157,28 @@ O cliente HTTP Axios (`dsilk-frontend/src/services/api.ts`) e a camada de compon
    - Na tela de login, um banner azul com ícone `Info` exibe a mensagem de design:
      > *"Sua sessão expirou por inatividade ou segurança. Faça login novamente para continuar."*
 2. **Tratamento de Acesso Negado por Perfil (403 Forbidden):**
-   - Ao receber `403` do backend (tentativa de operação não autorizada para o perfil), o interceptor emite um evento global `dsilk:forbidden`.
-   - O `DashboardLayout.tsx` captura o evento e renderiza um alerta vermelho fixado no topo da área de conteúdo com ícone `ShieldAlert`:
+   - **Tela e Rota Dedicada (`/forbidden`):** Implementada em `dsilk-frontend/src/pages/ForbiddenPage.tsx`, integrada ao `ProtectedRoute.tsx` via propriedade `allowedRoles` (ex.: `allowedRoles={['ADMINISTRADOR']}`). Caso um usuário com perfil `FUNCIONARIO` tente acessar uma rota administrativa restrita, ele é redirecionado automaticamente para `/forbidden`, que exibe o estado visual 403 padronizado com botão de retorno à Visão Geral (`/overview`) ou troca de conta.
+   - **Interceptação Global de API (`403`):** Ao receber `403` do backend em operações de página, o interceptor Axios emite o evento global `dsilk:forbidden`, e o `DashboardLayout.tsx` renderiza um alerta fixado no topo da área de conteúdo com ícone `ShieldAlert`:
      > *"Acesso negado: seu perfil de usuário não tem permissão para realizar esta operação."*
 
 ---
 
-### 3.3 Verificação em Dispositivo Real das Telas em Rede Local
+### 3.3 Responsividade Mobile, Acessibilidade e Limpeza (Issue #90)
+
+1. **Menu Lateral Responsivo (Drawer Mobile `< 768px`):**
+   - Em viewports móveis (`< 768px`), o cabeçalho exibe o botão de menu hambúrguer (`mobile-menu-toggle`) com atributos `aria-label` e `aria-expanded`.
+   - A sidebar abre suavemente como um drawer lateral (`dashboard-sidebar.mobile-open`) sobre um backdrop semitransparente clicável (`mobile-sidebar-backdrop`) e fecha automaticamente ao navegar entre itens ou pressionar `Escape`.
+   - As grades de múltiplas colunas (`Overview`, `BudgetCalculator`, `ServicesList`) e tabelas (`dashboard-table`) adaptam-se automaticamente para evitar quebras de layout em smartphones (`360px–430px`).
+2. **Acessibilidade (Teclado e Leitores de Tela):**
+   - Todos os modais da aplicação (`Novo Colaborador`, `Central de Suporte`, `Perfil do Cliente`, `Novo Cliente`, `Composição Técnica de Serviço` e `Agendamento de Atividade`) suportam fechamento imediato via tecla `Escape`.
+   - Todos os botões compostos apenas por ícones (`X`, `Trash2`, `Plus`, `ChevronLeft`, `ChevronRight`, `Menu`) possuem `aria-label` descritivo.
+   - Os itens de navegação da sidebar possuem `role="button"` e `tabIndex={0}` com suporte às teclas `Enter` e `Espaço`.
+3. **Limpeza de Código Legado:**
+   - Removido o componente legado `PlaceholderPage.tsx` e eliminadas chamadas residuais a `alert()` nativo do navegador.
+
+---
+
+### 3.4 Verificação em Dispositivo Real das Telas em Rede Local
 
 A aplicação foi executada e homologada em **dispositivo real (smartphone)** conectado à mesma rede local Wi-Fi, conforme documentado em detalhes em [`docs/testes/evidencias/verificacao-dispositivo-real.md`](docs/testes/evidencias/verificacao-dispositivo-real.md):
 - **Exposição de Rede:** O servidor Vite foi configurado com `server.host: '0.0.0.0'` na porta `5173`, permitindo acesso via `http://<IP-LOCAL>:5173`.
