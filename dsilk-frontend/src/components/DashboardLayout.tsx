@@ -1,9 +1,26 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, LogOut, UserPlus, ShieldAlert, X, CheckCircle, Lock, User, Shield } from 'lucide-react';
+import { 
+  Search, 
+  LogOut, 
+  UserPlus, 
+  ShieldAlert, 
+  X, 
+  CheckCircle, 
+  Lock, 
+  User, 
+  Shield,
+  Users,
+  FileText,
+  HelpCircle,
+  Mail,
+  Clock
+} from 'lucide-react';
 import { getUser, clearSession } from '../services/storage';
 import { Logo } from './Logo';
 import { authService } from '../services/authService';
+import { clienteService, Cliente } from '../services/clienteService';
+import { orcamentoService, Orcamento } from '../services/orcamentoService';
 import { getApiErrorMessage } from '../types/api';
 
 interface DashboardLayoutProps {
@@ -14,11 +31,10 @@ interface DashboardLayoutProps {
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, activeMenu = 'Visão geral' }) => {
   const navigate = useNavigate();
   const user = getUser();
-  const userName = user?.nome || 'Diego Silva';
+  const userName = user?.nome || 'Colaborador';
   const isAdmin = user?.perfil === 'ADMINISTRADOR';
   const userRole = isAdmin ? 'Administrador' : 'Funcionário';
 
-  // Obter as iniciais do nome para o avatar (ex: "Diego Silva" -> "DS")
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
@@ -46,6 +62,75 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
       window.removeEventListener('dsilk:forbidden', handleForbidden);
     };
   }, []);
+
+  // Estado da Busca Global Funcional (Frontend 1 - Milestone 5)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchLoaded, setSearchLoaded] = useState(false);
+  const [clientesBusca, setClientesBusca] = useState<Cliente[]>([]);
+  const [orcamentosBusca, setOrcamentosBusca] = useState<Orcamento[]>([]);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const carregarDadosBuscaGlobal = async () => {
+    if (searchLoaded || searchLoading) return;
+    try {
+      setSearchLoading(true);
+      const [clis, orcs] = await Promise.all([
+        clienteService.listar(),
+        orcamentoService.listar(),
+      ]);
+      setClientesBusca(clis);
+      setOrcamentosBusca(orcs);
+      setSearchLoaded(true);
+    } catch {
+      // Silencioso no dropdown de busca rápida
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const termoLimpo = searchQuery.trim().toLowerCase();
+
+  const clientesFiltrados = termoLimpo
+    ? clientesBusca
+        .filter(
+          (c) =>
+            c.nome.toLowerCase().includes(termoLimpo) ||
+            (c.email && c.email.toLowerCase().includes(termoLimpo)) ||
+            (c.telefone && c.telefone.toLowerCase().includes(termoLimpo))
+        )
+        .slice(0, 4)
+    : [];
+
+  const orcamentosFiltrados = termoLimpo
+    ? orcamentosBusca
+        .filter(
+          (o) =>
+            String(o.id).includes(termoLimpo.replace('#', '')) ||
+            (o.cliente?.nome && o.cliente.nome.toLowerCase().includes(termoLimpo)) ||
+            (o.servico?.nome && o.servico.nome.toLowerCase().includes(termoLimpo))
+        )
+        .slice(0, 4)
+    : [];
+
+  // Estado do Modal de Suporte (substituindo alert() nativo)
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
 
   // Estado do Modal de Cadastro de Funcionário (exclusivo para Administrador - Frontend 2)
   const [modalOpen, setModalOpen] = useState(false);
@@ -123,13 +208,218 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
         </div>
         
         <div className="dashboard-header-right">
-          <div className="search-container">
+          {/* Busca Global Funcional */}
+          <div
+            className="search-container"
+            ref={searchContainerRef}
+            style={{ position: 'relative' }}
+          >
             <Search className="search-icon" size={17} />
             <input 
               type="text" 
-              placeholder="Buscar clientes, pedidos..." 
+              placeholder="Buscar clientes, pedidos (#ID)..." 
               className="header-search"
+              value={searchQuery}
+              onFocus={() => {
+                setSearchOpen(true);
+                carregarDadosBuscaGlobal();
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchOpen(true);
+                carregarDadosBuscaGlobal();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchOpen(false);
+                }
+              }}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Limpar busca"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchOpen(false);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '0.6rem',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+
+            {searchOpen && termoLimpo.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  right: 0,
+                  minWidth: '310px',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 12px 24px -4px rgba(15, 23, 42, 0.14)',
+                  zIndex: 1100,
+                  padding: '0.5rem',
+                  maxHeight: '360px',
+                  overflowY: 'auto',
+                }}
+              >
+                {searchLoading ? (
+                  <div style={{ padding: '0.85rem', fontSize: '0.825rem', color: '#64748B', textAlign: 'center' }}>
+                    Buscando registros...
+                  </div>
+                ) : clientesFiltrados.length === 0 && orcamentosFiltrados.length === 0 ? (
+                  <div style={{ padding: '0.85rem', fontSize: '0.825rem', color: '#64748B', textAlign: 'center' }}>
+                    Nenhum cliente ou orçamento encontrado para "{searchQuery}".
+                  </div>
+                ) : (
+                  <>
+                    {clientesFiltrados.length > 0 && (
+                      <div style={{ marginBottom: orcamentosFiltrados.length > 0 ? '0.5rem' : 0 }}>
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: '#94A3B8',
+                            padding: '0.25rem 0.5rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          Clientes ({clientesFiltrados.length})
+                        </div>
+                        {clientesFiltrados.map((cli) => (
+                          <button
+                            key={`cli-${cli.id}`}
+                            type="button"
+                            onClick={() => {
+                              setSearchOpen(false);
+                              setSearchQuery('');
+                              navigate(`/clients?clienteId=${cli.id}`);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.5rem 0.6rem',
+                              background: 'none',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <Users size={15} color="#0284C7" style={{ flexShrink: 0 }} />
+                            <div style={{ overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  fontSize: '0.85rem',
+                                  fontWeight: 600,
+                                  color: '#0F172A',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {cli.nome}
+                              </div>
+                              <div style={{ fontSize: '0.73rem', color: '#64748B' }}>
+                                {cli.telefone || cli.email || 'Ver perfil do cliente'}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {orcamentosFiltrados.length > 0 && (
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: '#94A3B8',
+                            padding: '0.25rem 0.5rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          Orçamentos ({orcamentosFiltrados.length})
+                        </div>
+                        {orcamentosFiltrados.map((orc) => (
+                          <button
+                            key={`orc-${orc.id}`}
+                            type="button"
+                            onClick={() => {
+                              setSearchOpen(false);
+                              setSearchQuery('');
+                              navigate(`/budgets/new?id=${orc.id}`);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '0.6rem',
+                              padding: '0.5rem 0.6rem',
+                              background: 'none',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
+                              <FileText size={15} color="#0284C7" style={{ flexShrink: 0 }} />
+                              <div style={{ overflow: 'hidden' }}>
+                                <div
+                                  style={{
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    color: '#0F172A',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  #{orc.id} — {orc.cliente?.nome || 'Sem cliente'}
+                                </div>
+                                <div style={{ fontSize: '0.73rem', color: '#64748B' }}>
+                                  {orc.servico?.nome || 'Serviço'}
+                                </div>
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                color: orc.rascunho ? '#B45309' : '#15803D',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {orc.rascunho ? 'Rascunho' : 'Registrado'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Interface adaptada ao perfil (Frontend 2): botão visível APENAS para Administrador */}
@@ -189,7 +479,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
             </div>
           ))}
 
-          {/* Card de Suporte no rodapé da Sidebar (Figma Image 4) */}
+          {/* Card de Suporte no rodapé da Sidebar (Sem alert() nativo) */}
           <div className="sidebar-support-card">
             <div className="support-tag">SUPORTE</div>
             <div className="support-title">Precisa de ajuda?</div>
@@ -197,7 +487,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
             <button 
               type="button" 
               className="support-link"
-              onClick={() => alert('Central de Suporte Dsilk: contato@dsilk.com.br')}
+              onClick={() => setSupportModalOpen(true)}
             >
               Chamar suporte
             </button>
@@ -246,6 +536,96 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
           {children}
         </main>
       </div>
+
+      {/* Modal de Suporte Técnico Dsilk */}
+      {supportModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(2px)',
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '1.75rem 2rem',
+              width: '100%',
+              maxWidth: '440px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HelpCircle size={20} color="#009FE3" />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#0F172A' }}>
+                  Central de Suporte Dsilk
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSupportModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Precisa de auxílio com fichas técnicas de serigrafia, insumos ou permissões de acesso? Entre em contato pelos canais abaixo:
+            </p>
+
+            <div
+              style={{
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '8px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.875rem', color: '#0F172A' }}>
+                <Mail size={16} color="#0284C7" />
+                <span>
+                  <strong>E-mail:</strong> contato@dsilk.com.br
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.875rem', color: '#0F172A' }}>
+                <Clock size={16} color="#0284C7" />
+                <span>
+                  <strong>Atendimento:</strong> Seg a Sex, 08h às 18h
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.875rem', color: '#0F172A' }}>
+                <Shield size={16} color="#0284C7" />
+                <span>
+                  <strong>Seu perfil atual:</strong> {userRole}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn-dark"
+                onClick={() => setSupportModalOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Cadastro de Funcionário (Visível apenas para Administrador) */}
       {modalOpen && isAdmin && (
