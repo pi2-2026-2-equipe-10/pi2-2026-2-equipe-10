@@ -275,14 +275,7 @@ export const Overview: React.FC = () => {
       </div>
 
       {/* Grid Inferior: Pedidos Recentes + Produção da Semana */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.6fr 1fr',
-          gap: '1.5rem',
-          alignItems: 'start',
-        }}
-      >
+      <div className="overview-bottom-grid">
         {/* Coluna Esquerda: Pedidos recentes (Orçamentos reais) */}
         <div className="dashboard-card" style={{ padding: '1.75rem 2rem' }}>
           <div

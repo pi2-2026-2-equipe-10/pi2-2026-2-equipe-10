@@ -251,7 +251,7 @@ export const ServicesRegistration: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-dark)', fontWeight: 500, fontSize: '0.875rem' }}>
                   <CheckCircle size={18} color="var(--dsilk-magenta)" />
-                  <span>Configuração de Composição (RF005)</span>
+                  <span>Configuração de Composição</span>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', margin: '0.35rem 0 0 0' }}>
                   Após registrar este serviço, você poderá definir a lista de insumos e o tempo de operação clicando no botão <strong>Composição</strong> na lista de serviços.

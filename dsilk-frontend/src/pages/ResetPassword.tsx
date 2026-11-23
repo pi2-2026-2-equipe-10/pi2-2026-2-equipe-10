@@ -18,12 +18,12 @@ export const ResetPassword: React.FC = () => {
 
     // RN-08: A nova senha deve possuir no mínimo 8 caracteres e ser diferente da senha anteriormente utilizada
     if (novaSenha.length < 8) {
-      setErro('A nova senha deve possuir no mínimo 8 caracteres (RN-08).');
+      setErro('A nova senha deve possuir no mínimo 8 caracteres.');
       return;
     }
 
     if (novaSenha === '123456') {
-      setErro('A nova senha deve ser diferente da senha anteriormente utilizada (RN-08).');
+      setErro('A nova senha deve ser diferente da senha anteriormente utilizada.');
       return;
     }
 
@@ -45,7 +45,7 @@ export const ResetPassword: React.FC = () => {
   return (
     <AuthLayout 
       title="Criar Nova Senha" 
-      subtitle="A nova senha deve ter no mínimo 8 caracteres e ser diferente da senha anterior (RN-08)."
+      subtitle="A nova senha deve ter no mínimo 8 caracteres e ser diferente da senha anterior."
     >
       {redefinidaComSucesso ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -69,7 +69,7 @@ export const ResetPassword: React.FC = () => {
                 Senha redefinida com sucesso!
               </strong>
               <span>
-                Sua nova senha atende aos requisitos de segurança (RN-08). Você já pode retornar à tela de login para acessar o sistema.
+                Sua nova senha atende aos requisitos de segurança. Você já pode retornar à tela de login para acessar o sistema.
               </span>
             </div>
           </div>

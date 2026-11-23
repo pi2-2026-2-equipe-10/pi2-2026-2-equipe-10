@@ -19,7 +19,7 @@ export const ForgotPassword: React.FC = () => {
     const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailLimpo || !regexEmail.test(emailLimpo)) {
-      setErro('Informe um endereço de e-mail válido cadastrado no sistema (RN-06).');
+      setErro('Informe um endereço de e-mail válido cadastrado no sistema.');
       return;
     }
 
@@ -39,7 +39,7 @@ export const ForgotPassword: React.FC = () => {
   return (
     <AuthLayout 
       title="Recuperar Senha" 
-      subtitle="Informe o e-mail cadastrado para receber um código de verificação de 5 dígitos (RN-06)."
+      subtitle="Informe o e-mail cadastrado para receber um código de verificação de 5 dígitos."
     >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         {erro && (

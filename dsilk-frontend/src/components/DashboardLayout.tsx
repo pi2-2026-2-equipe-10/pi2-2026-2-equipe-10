@@ -14,7 +14,8 @@ import {
   FileText,
   HelpCircle,
   Mail,
-  Clock
+  Clock,
+  Menu
 } from 'lucide-react';
 import { getUser, clearSession } from '../services/storage';
 import { Logo } from './Logo';
@@ -129,6 +130,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
         .slice(0, 4)
     : [];
 
+  // Estado do Menu Mobile Drawer (< 768px - Issue #90)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Estado do Modal de Suporte (substituindo alert() nativo)
   const [supportModalOpen, setSupportModalOpen] = useState(false);
 
@@ -140,6 +144,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
   const [salvandoColaborador, setSalvandoColaborador] = useState(false);
   const [modalErro, setModalErro] = useState<string | null>(null);
   const [modalSucesso, setModalSucesso] = useState<string | null>(null);
+
+  // Acessibilidade: fechamento de modais e drawer mobile via tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (supportModalOpen) setSupportModalOpen(false);
+        if (modalOpen && !salvandoColaborador) setModalOpen(false);
+        if (mobileMenuOpen) setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [supportModalOpen, modalOpen, salvandoColaborador, mobileMenuOpen]);
 
   const handleSalvarColaborador = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,9 +214,22 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
       {/* Header Superior Estilo Figma */}
       <header className="dashboard-header">
         <div className="dashboard-header-left">
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-label={mobileMenuOpen ? 'Fechar menu de navegação' : 'Abrir menu de navegação'}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+          >
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
           <div 
             className="dashboard-logo" 
-            onClick={() => navigate('/overview')}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              navigate('/overview');
+            }}
             title="Ir para Visão Geral"
             style={{ cursor: 'pointer' }}
           >
@@ -465,15 +495,39 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
       </header>
 
       <div className="dashboard-main">
-        {/* Sidebar Estilo Figma */}
-        <aside className="dashboard-sidebar">
+        {/* Backdrop clicável para fechar o drawer em viewports mobile (< 768px) */}
+        {mobileMenuOpen && (
+          <div
+            className="mobile-sidebar-backdrop"
+            aria-hidden="true"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Sidebar Estilo Figma (Drawer colapsável em mobile) */}
+        <aside
+          className={`dashboard-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}
+          aria-label="Menu principal"
+        >
           <div className="sidebar-section-title">MENU PRINCIPAL</div>
 
           {menuItems.map(item => (
             <div 
               key={item.name} 
+              role="button"
+              tabIndex={0}
               className={`sidebar-nav-item ${activeMenu === item.name ? 'active' : ''}`}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate(item.path);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  navigate(item.path);
+                }
+              }}
             >
               {item.name}
             </div>
@@ -487,7 +541,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
             <button 
               type="button" 
               className="support-link"
-              onClick={() => setSupportModalOpen(true)}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setSupportModalOpen(true);
+              }}
             >
               Chamar suporte
             </button>
@@ -518,6 +575,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
               </div>
               <button
                 type="button"
+                aria-label="Dispensar aviso de acesso negado"
                 onClick={() => setForbiddenError(null)}
                 style={{
                   background: 'none',
@@ -571,6 +629,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
               </div>
               <button
                 type="button"
+                aria-label="Fechar central de suporte"
                 onClick={() => setSupportModalOpen(false)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
               >
@@ -662,6 +721,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, acti
               </div>
               <button
                 type="button"
+                aria-label="Fechar modal de novo colaborador"
                 onClick={() => setModalOpen(false)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
               >

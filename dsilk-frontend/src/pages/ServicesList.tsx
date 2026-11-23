@@ -142,6 +142,7 @@ export const ServicesList: React.FC = () => {
   };
 
   const fecharModalComposicao = () => {
+    if (salvandoComposicao) return;
     setModalComposicaoAberto(false);
     setServicoEmEdicao(null);
     setItensComposicao([]);
@@ -149,6 +150,18 @@ export const ServicesList: React.FC = () => {
     setCustoHora('');
     setErroModal(null);
   };
+
+  // Acessibilidade: fechar modal de composição via tecla Escape
+  useEffect(() => {
+    if (!modalComposicaoAberto) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !salvandoComposicao) {
+        fecharModalComposicao();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalComposicaoAberto, salvandoComposicao]);
 
   const adicionarLinhaItem = () => {
     if (materiais.length === 0) return;
@@ -170,13 +183,13 @@ export const ServicesList: React.FC = () => {
     if (!servicoEmEdicao) return;
 
     if (itensComposicao.length === 0) {
-      setErroModal('A composição deve conter ao menos um material (RN-01).');
+      setErroModal('A composição deve conter ao menos um material.');
       return;
     }
 
     for (let i = 0; i < itensComposicao.length; i++) {
       if (!itensComposicao[i].quantidade || itensComposicao[i].quantidade <= 0) {
-        setErroModal(`A quantidade do item ${i + 1} deve ser maior que zero (RN-02).`);
+        setErroModal(`A quantidade do item ${i + 1} deve ser maior que zero.`);
         return;
       }
     }
@@ -328,13 +341,6 @@ export const ServicesList: React.FC = () => {
                   <td style={{ textAlign: 'right' }}>
                     <button 
                       type="button"
-                      onClick={() => alert(`Editar serviço ${servico.nome}`)}
-                      className="table-action-link"
-                    >
-                      Editar
-                    </button>
-                    <button 
-                      type="button"
                       onClick={() => abrirModalComposicao(servico)}
                       className="table-action-link"
                     >
@@ -379,7 +385,7 @@ export const ServicesList: React.FC = () => {
           )}
 
           <form onSubmit={handleSalvarNovoServico} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+            <div className="services-form-grid">
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.4rem' }}>
                   Nome do serviço
@@ -497,6 +503,7 @@ export const ServicesList: React.FC = () => {
               </div>
               <button 
                 type="button" 
+                aria-label="Fechar modal de composição técnica"
                 onClick={fecharModalComposicao} 
                 disabled={salvandoComposicao}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7 }}
@@ -572,6 +579,7 @@ export const ServicesList: React.FC = () => {
 
                       <button
                         type="button"
+                        aria-label={`Remover insumo ${index + 1}`}
                         onClick={() => removerLinhaItem(index)}
                         disabled={itensComposicao.length <= 1 || salvandoComposicao}
                         style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', padding: '0.5rem' }}

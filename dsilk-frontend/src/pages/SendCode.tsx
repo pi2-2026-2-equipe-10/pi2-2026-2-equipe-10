@@ -31,7 +31,7 @@ export const SendCode: React.FC = () => {
     const codigoLimpo = codigo.trim();
     // RN-06 e RN-07: código de verificação deve possuir exatamente 5 dígitos numéricos
     if (!/^\d{5}$/.test(codigoLimpo)) {
-      setErro('O código de verificação deve conter exatamente 5 dígitos numéricos (RN-06 / RN-07).');
+      setErro('O código de verificação deve conter exatamente 5 dígitos numéricos.');
       return;
     }
 
@@ -55,8 +55,8 @@ export const SendCode: React.FC = () => {
       title="Validar Código" 
       subtitle={
         emailRecuperacao
-          ? `Digite o código de 5 dígitos enviado para ${emailRecuperacao} (RN-07).`
-          : 'Verifique sua caixa de entrada e informe o código de 5 dígitos recebido (RN-07).'
+          ? `Digite o código de 5 dígitos enviado para ${emailRecuperacao}.`
+          : 'Verifique sua caixa de entrada e informe o código de 5 dígitos recebido.'
       }
     >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>

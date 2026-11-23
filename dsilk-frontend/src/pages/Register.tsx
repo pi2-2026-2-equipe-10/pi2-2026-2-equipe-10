@@ -28,7 +28,7 @@ export const Register: React.FC = () => {
 
     if (!isAdmin) {
       setErro(
-        'Conforme a Matriz de Autorização (RF-12), apenas usuários autenticados com perfil Administrador podem cadastrar novos colaboradores.'
+        'Conforme a Matriz de Autorização, apenas usuários autenticados com perfil Administrador podem cadastrar novos colaboradores.'
       );
       return;
     }
@@ -73,7 +73,7 @@ export const Register: React.FC = () => {
   return (
     <AuthLayout 
       title="Cadastro de Colaborador" 
-      subtitle="Registro de novos funcionários no sistema interno Dsilk (RF-12)."
+      subtitle="Registro de novos funcionários no sistema interno Dsilk."
     >
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         {!isAdmin && (

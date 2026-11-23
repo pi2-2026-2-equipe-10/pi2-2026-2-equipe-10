@@ -13,6 +13,7 @@ import { BudgetCalculator } from './pages/BudgetCalculator';
 import { PlanningWeekly } from './pages/PlanningWeekly';
 import { ClientsList } from './pages/ClientsList';
 import { Overview } from './pages/Overview';
+import { ForbiddenPage } from './pages/ForbiddenPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import './styles/dashboard.css';
@@ -28,6 +29,19 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/send-code" element={<SendCode />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Rota Dedicada de Acesso Negado (403 Forbidden - Issue #87 / #90) */}
+        <Route path="/forbidden" element={<ForbiddenPage />} />
+
+        {/* Rota Administrativa Protegida por RBAC (Redireciona Funcionário para /forbidden) */}
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+              <Overview />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Rotas Protegidas (Exigem autenticação via ProtectedRoute) */}
         <Route
